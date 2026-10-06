@@ -10,15 +10,15 @@ A **panel** is a complete coloured polynomial diagram such as the orange \(A_4(q
 
 Only presentation objects move.
 
-The renderer may animate an entire panel downward toward the common coefficient columns. That motion is a pixel offset attached to a `PanelPreview`.
+The renderer may animate an entire panel downward toward the common coefficient columns. That motion is a pixel offset attached to a `Panel_preview`.
 
-The typed invariant is that moving a preview changes only its pixel offset; the `previewDiagram` before and after is identical. Animation therefore cannot alter degree, sign, or provenance.
+The typed invariant is that moving a preview changes only its pixel offset; the `preview_diagram` before and after is identical. Animation therefore cannot alter degree, sign, or provenance.
 
 ## What dropping means
 
 A downward animation can visually resemble dropping blocks because that is how the red Tetris arrows are drawn.
 
-But the semantic event at the end is simply `AddWholePanel factor`, meaning current stack plus `factorPanel factor`. No collision solver is involved.
+But the semantic event at the end is simply `Add_whole_panel factor`, meaning current stack plus `factor_panel factor`. No collision solver is involved.
 
 If a drag is cancelled or released outside the addition area, no arithmetic occurs.
 
