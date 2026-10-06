@@ -64,7 +64,7 @@ A completed path is therefore a partition with largest allowed part at most \(M\
 
 This is the cleanest first playable mode because every path has positive weight \(1\).
 
-## Mock-theta mode
+## Ramanujan-f summand mode
 
 For one summand of Ramanujan's third-order function
 
@@ -114,11 +114,31 @@ Idris is not intended to own the Android renderer.
 
 The C/Lua representation can be flat and cheap. Its tests should be generated from or checked against fixtures corresponding to the Idris examples.
 
-## Deliberately outside this module
+## Validation boundary
+
+Tetris legality and mock-theta validity are different propositions.
+
+A legal block proves only that a term belongs to the factor being played. A completed
+Tetris path proves only a coefficient contribution to its factorized product. Neither
+fact is evidence that the resulting whole (q)-series is a mock theta function.
+
+`MockTheta.Validation` therefore accepts whole `QSeriesSpec` values, not
+`FallingPiece` values. A generic `TetrisProduct` is classified `Unverified` and
+cannot construct `ValidatedMockTheta`. The known full Ramanujan third-order (f(q))
+has separate evidence.
+
+A finite coefficient prefix also remains `Unverified`: matching finitely many
+coefficients cannot establish the infinite analytic and modular conditions.
+
+The partition generating series is explicitly classified separately as
+`KnownNonMockTheta`. In particular, a mathematically legal Tetris construction does
+not become a mock theta function merely because Tetris can display it.
+
+## Deliberately outside the Tetris module
 
 These should share a higher-level mathematical representation but should not be folded into the Tetris types:
 
-- theta-function and mock-modular validation;
+- the implementation of theta-function and mock-modular validation;
 - moving through parameter families;
 - lattice and fundamental-parallelogram visualization;
 - Wegert plots;
