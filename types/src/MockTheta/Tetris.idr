@@ -17,268 +17,268 @@ data Sign
   | Minus
 
 public export
-signValue : Sign -> Coefficient
-signValue Plus = 1
-signValue Minus = -1
+sign_value : Sign -> Coefficient
+sign_value Plus = 1
+sign_value Minus = -1
 
 public export
-flipSign : Sign -> Sign
-flipSign Plus = Minus
-flipSign Minus = Plus
+flip_sign : Sign -> Sign
+flip_sign Plus = Minus
+flip_sign Minus = Plus
 
-||| Factor stores n-1, so every FactorIndex denotes a genuine positive n.
+||| Factor stores n-1, so every Factor_index denotes a genuine positive n.
 ||| Factor 0 means (1 - q), Factor 1 means (1 - q^2), and so on.
 public export
-data FactorIndex
+data Factor_index
   = Factor Nat
 
 public export
-factorDegree : FactorIndex -> Degree
-factorDegree (Factor zeroBased) = S zeroBased
+factor_degree : Factor_index -> Degree
+factor_degree (Factor zeroBased) = S zeroBased
 
 public export
-factor1 : FactorIndex
-factor1 = Factor 0
+factor_1 : Factor_index
+factor_1 = Factor 0
 
 public export
-factor2 : FactorIndex
-factor2 = Factor 1
+factor_2 : Factor_index
+factor_2 = Factor 1
 
 public export
-factor3 : FactorIndex
-factor3 = Factor 2
+factor_3 : Factor_index
+factor_3 = Factor 2
 
 public export
-factor4 : FactorIndex
-factor4 = Factor 3
+factor_4 : Factor_index
+factor_4 = Factor 3
 
 public export
-factor5 : FactorIndex
-factor5 = Factor 4
+factor_5 : Factor_index
+factor_5 = Factor 4
 
 ||| These are the ONLY constructors for a polynomial admitted by the Tetris
 ||| language.
 |||
 ||| In particular, there is no constructor taking a coefficient list or a raw
-||| cell diagram. Every inhabited AllowedPolynomial is structurally a finite
+||| cell diagram. Every inhabited Allowed_polynomial is structurally a finite
 ||| sum of permitted Shape values (with Zero as the empty sum).
 public export
-data AllowedPolynomial
+data Allowed_polynomial
   = Zero
-  | Shape FactorIndex
-  | Add AllowedPolynomial AllowedPolynomial
+  | Shape Factor_index
+  | Add Allowed_polynomial Allowed_polynomial
 
 ||| Safe convenience constructor: a list of factors still becomes only a sum
 ||| of permitted shapes.
 public export
-shapeSum : List FactorIndex -> AllowedPolynomial
-shapeSum [] =
+shape_sum : List Factor_index -> Allowed_polynomial
+shape_sum [] =
   Zero
-shapeSum (factor :: rest) =
-  Add (Shape factor) (shapeSum rest)
+shape_sum (factor :: rest) =
+  Add (Shape factor) (shape_sum rest)
 
 ||| In the blog drawings the input to the n-th coloured panel is
 |||
-|||   1 + (1-q) + (1-q^2) + ... + (1-q^(n-1)).
+|||   1 + (1−q) + (1−q^2) + ... + (1−q^(n-1)).
 |||
 ||| We preserve which summand produced each unit square.
 public export
-data SeedOrigin
-  = LeadingOne
-  | PreviousEulerFactor Degree
+data Seed_origin
+  = Leading_one
+  | Previous_euler_factor Degree
 
-||| Multiplication by (1-q^n) makes two copies:
+||| Multiplication by (1−q^n) makes two copies:
 |||
-|||   P(q)          and          -q^n P(q).
+|||   P(q)          and          −q^n P(q).
 public export
-data MultiplicationBranch
+data Multiplication_branch
   = Unshifted
-  | ShiftedNegated
+  | Shifted_negated
 
 public export
-record SeedCell where
+record Seed_cell where
   constructor Seed
-  seedDegree : Degree
-  seedSign : Sign
-  seedOrigin : SeedOrigin
+  seed_degree : Degree
+  seed_sign : Sign
+  seed_origin : Seed_origin
 
 ||| A Cell is a read/render view of the mathematical "block" in the post.
 |||
-||| A raw Cell or Diagram is NOT an AllowedPolynomial and there is no public
-||| conversion from arbitrary cells back to AllowedPolynomial.
+||| A raw Cell or Diagram is NOT an Allowed_polynomial and there is no public
+||| conversion from arbitrary cells back to Allowed_polynomial.
 public export
 record Cell where
-  constructor SignedCell
+  constructor Signed_cell
   degree : Degree
   sign : Sign
-  panelFactor : FactorIndex
-  seedOrigin : SeedOrigin
-  branch : MultiplicationBranch
+  panel_factor : Factor_index
+  seed_origin : Seed_origin
+  branch : Multiplication_branch
 
 public export
 Diagram : Type
 Diagram = List Cell
 
 private
-previousSeedCells : (remaining : Nat) -> (nextDegree : Degree) -> List SeedCell
-previousSeedCells Z nextDegree =
+previousSeed_cells : (remaining : Nat) -> (next_degree : Degree) -> List Seed_cell
+previousSeed_cells Z next_degree =
   []
-previousSeedCells (S remaining) nextDegree =
-  Seed 0 Plus (PreviousEulerFactor nextDegree) ::
-  Seed nextDegree Minus (PreviousEulerFactor nextDegree) ::
-  previousSeedCells remaining (S nextDegree)
+previousSeed_cells (S remaining) next_degree =
+  Seed 0 Plus (Previous_euler_factor next_degree) ::
+  Seed next_degree Minus (Previous_euler_factor next_degree) ::
+  previousSeed_cells remaining (S next_degree)
 
 ||| Unit-square expansion of
 |||
-|||   1 + sum_{j=1}^{n-1} (1-q^j).
+|||   1 + sum_{j=1}^{n-1} (1−q^j).
 public export
-panelSeed : FactorIndex -> List SeedCell
-panelSeed (Factor zeroBased) =
-  Seed 0 Plus LeadingOne ::
-  previousSeedCells zeroBased 1
+panel_seed : Factor_index -> List Seed_cell
+panel_seed (Factor zeroBased) =
+  Seed 0 Plus Leading_one ::
+  previousSeed_cells zeroBased 1
 
 private
-expandSeedCell : FactorIndex -> SeedCell -> Diagram
-expandSeedCell factor seed =
-  [ SignedCell
-      (seedDegree seed)
-      (seedSign seed)
+expandSeed_cell : Factor_index -> Seed_cell -> Diagram
+expandSeed_cell factor seed =
+  [ Signed_cell
+      (seed_degree seed)
+      (seed_sign seed)
       factor
-      (seedOrigin seed)
+      (seed_origin seed)
       Unshifted
-  , SignedCell
-      (seedDegree seed + factorDegree factor)
-      (flipSign (seedSign seed))
+  , Signed_cell
+      (seed_degree seed + factor_degree factor)
+      (flip_sign (seed_sign seed))
       factor
-      (seedOrigin seed)
-      ShiftedNegated
+      (seed_origin seed)
+      Shifted_negated
   ]
 
 private
-expandAll : FactorIndex -> List SeedCell -> Diagram
-expandAll factor [] =
+expand_all : Factor_index -> List Seed_cell -> Diagram
+expand_all factor [] =
   []
-expandAll factor (seed :: rest) =
-  expandSeedCell factor seed ++ expandAll factor rest
+expand_all factor (seed :: rest) =
+  expandSeed_cell factor seed ++ expand_all factor rest
 
 ||| Render view of one permitted primitive Shape.
 public export
-factorPanel : FactorIndex -> Diagram
-factorPanel factor =
-  expandAll factor (panelSeed factor)
+factor_panel : Factor_index -> Diagram
+factor_panel factor =
+  expand_all factor (panel_seed factor)
 
 ||| "Tetris" in the post means addition of diagrams.
 ||| This is a derived rendering operation, not a constructor for
-||| AllowedPolynomial.
+||| Allowed_polynomial.
 public export
-tetrisAdd : Diagram -> Diagram -> Diagram
-tetrisAdd left right =
+tetris_add : Diagram -> Diagram -> Diagram
+tetris_add left right =
   left ++ right
 
 ||| The only interpretation from an allowed formula into visible signed cells.
 public export
-diagram : AllowedPolynomial -> Diagram
+diagram : Allowed_polynomial -> Diagram
 diagram Zero =
   []
 diagram (Shape factor) =
-  factorPanel factor
+  factor_panel factor
 diagram (Add left right) =
-  tetrisAdd (diagram left) (diagram right)
+  tetris_add (diagram left) (diagram right)
 
 public export
-coefficientAt : Degree -> Diagram -> Coefficient
-coefficientAt wanted [] =
+coefficient_at : Degree -> Diagram -> Coefficient
+coefficient_at wanted [] =
   0
-coefficientAt wanted (cell :: rest) =
+coefficient_at wanted (cell :: rest) =
   let contribution =
         if degree cell == wanted
-           then signValue (sign cell)
+           then sign_value (sign cell)
            else 0
-   in contribution + coefficientAt wanted rest
+   in contribution + coefficient_at wanted rest
 
 public export
-allowedCoefficientAt : Degree -> AllowedPolynomial -> Coefficient
-allowedCoefficientAt wanted polynomial =
-  coefficientAt wanted (diagram polynomial)
+allowed_coefficient_at : Degree -> Allowed_polynomial -> Coefficient
+allowed_coefficient_at wanted polynomial =
+  coefficient_at wanted (diagram polynomial)
 
 public export
-columnCells : Degree -> Diagram -> List Cell
-columnCells wanted [] =
+column_cells : Degree -> Diagram -> List Cell
+column_cells wanted [] =
   []
-columnCells wanted (cell :: rest) =
+column_cells wanted (cell :: rest) =
   if degree cell == wanted
-     then cell :: columnCells wanted rest
-     else columnCells wanted rest
+     then cell :: column_cells wanted rest
+     else column_cells wanted rest
 
 private
-coefficientsFrom :
-     (nextDegree : Degree)
+coefficients_from :
+     (next_degree : Degree)
   -> (count : Nat)
   -> Diagram
   -> List Coefficient
-coefficientsFrom nextDegree Z diagramView =
+coefficients_from next_degree Z diagram_view =
   []
-coefficientsFrom nextDegree (S count) diagramView =
-  coefficientAt nextDegree diagramView ::
-  coefficientsFrom (S nextDegree) count diagramView
+coefficients_from next_degree (S count) diagram_view =
+  coefficient_at next_degree diagram_view ::
+  coefficients_from (S next_degree) count diagram_view
 
 public export
-coefficientsThrough : Degree -> Diagram -> List Coefficient
-coefficientsThrough lastDegree diagramView =
-  coefficientsFrom 0 (S lastDegree) diagramView
+coefficients_through : Degree -> Diagram -> List Coefficient
+coefficients_through last_degree diagram_view =
+  coefficients_from 0 (S last_degree) diagram_view
 
 public export
-allowedCoefficientsThrough :
+allowed_coefficients_through :
      Degree
-  -> AllowedPolynomial
+  -> Allowed_polynomial
   -> List Coefficient
-allowedCoefficientsThrough lastDegree polynomial =
-  coefficientsThrough lastDegree (diagram polynomial)
+allowed_coefficients_through last_degree polynomial =
+  coefficients_through last_degree (diagram polynomial)
 
 ||| The blog lays the five coloured panels out in this order before the red
 ||| "Tetris" arrows: n=5,4,3,2,1.
 public export
-blogFivePanelOrder : List FactorIndex
-blogFivePanelOrder =
-  [factor5, factor4, factor3, factor2, factor1]
+blog_five_panel_order : List Factor_index
+blog_five_panel_order =
+  [factor_5, factor_4, factor_3, factor_2, factor_1]
 
 ||| The allowed formula itself. It is impossible to construct this value from
 ||| arbitrary coefficients; it is visibly a sum of five permitted Shapes.
 public export
-blogFivePanelPolynomial : AllowedPolynomial
-blogFivePanelPolynomial =
-  shapeSum blogFivePanelOrder
+blog_five_panel_polynomial : Allowed_polynomial
+blog_five_panel_polynomial =
+  shape_sum blog_five_panel_order
 
 public export
-blogFivePanelTetris : Diagram
-blogFivePanelTetris =
-  diagram blogFivePanelPolynomial
+blog_five_panel_tetris : Diagram
+blog_five_panel_tetris =
+  diagram blog_five_panel_polynomial
 
 -- -------------------------------------------------------------------------
--- Laws showing that AllowedPolynomial really means "sum of permitted shapes".
+-- Laws showing that Allowed_polynomial really means "sum of permitted shapes".
 -- -------------------------------------------------------------------------
 
 public export
-zeroDiagramLaw :
+zero_diagram_law :
   diagram Zero = []
-zeroDiagramLaw =
+zero_diagram_law =
   Refl
 
 public export
-shapeDiagramLaw :
-     (factor : FactorIndex)
-  -> diagram (Shape factor) = factorPanel factor
-shapeDiagramLaw factor =
+shape_diagram_law :
+     (factor : Factor_index)
+  -> diagram (Shape factor) = factor_panel factor
+shape_diagram_law factor =
   Refl
 
 public export
-additionDiagramLaw :
-     (left : AllowedPolynomial)
-  -> (right : AllowedPolynomial)
+addition_diagram_law :
+     (left : Allowed_polynomial)
+  -> (right : Allowed_polynomial)
   -> diagram (Add left right)
      =
-     tetrisAdd (diagram left) (diagram right)
-additionDiagramLaw left right =
+     tetris_add (diagram left) (diagram right)
+addition_diagram_law left right =
   Refl
 
 -- -------------------------------------------------------------------------
@@ -286,49 +286,49 @@ additionDiagramLaw left right =
 -- -------------------------------------------------------------------------
 
 public export
-factor1Coefficients :
-  allowedCoefficientsThrough 1 (Shape MockTheta.Tetris.factor1)
+factor_1Coefficients :
+  allowed_coefficients_through 1 (Shape MockTheta.Tetris.factor_1)
     =
   [1, -1]
-factor1Coefficients =
+factor_1Coefficients =
   Refl
 
 public export
-factor2Coefficients :
-  allowedCoefficientsThrough 3 (Shape MockTheta.Tetris.factor2)
+factor_2Coefficients :
+  allowed_coefficients_through 3 (Shape MockTheta.Tetris.factor_2)
     =
   [2, -1, -2, 1]
-factor2Coefficients =
+factor_2Coefficients =
   Refl
 
 public export
-factor3Coefficients :
-  allowedCoefficientsThrough 5 (Shape MockTheta.Tetris.factor3)
+factor_3Coefficients :
+  allowed_coefficients_through 5 (Shape MockTheta.Tetris.factor_3)
     =
   [3, -1, -1, -3, 1, 1]
-factor3Coefficients =
+factor_3Coefficients =
   Refl
 
 public export
-factor4Coefficients :
-  allowedCoefficientsThrough 7 (Shape MockTheta.Tetris.factor4)
+factor_4Coefficients :
+  allowed_coefficients_through 7 (Shape MockTheta.Tetris.factor_4)
     =
   [4, -1, -1, -1, -4, 1, 1, 1]
-factor4Coefficients =
+factor_4Coefficients =
   Refl
 
 public export
-factor5Coefficients :
-  allowedCoefficientsThrough 9 (Shape MockTheta.Tetris.factor5)
+factor_5Coefficients :
+  allowed_coefficients_through 9 (Shape MockTheta.Tetris.factor_5)
     =
   [5, -1, -1, -1, -1, -5, 1, 1, 1, 1]
-factor5Coefficients =
+factor_5Coefficients =
   Refl
 
 public export
-blogFivePanelCoefficients :
-  allowedCoefficientsThrough 9 MockTheta.Tetris.blogFivePanelPolynomial
+blog_five_panel_coefficients :
+  allowed_coefficients_through 9 MockTheta.Tetris.blog_five_panel_polynomial
     =
   [15, -5, -5, -4, -4, -3, 2, 2, 1, 1]
-blogFivePanelCoefficients =
+blog_five_panel_coefficients =
   Refl
