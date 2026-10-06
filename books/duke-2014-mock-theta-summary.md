@@ -18,19 +18,19 @@ This repository does **not** contain a copy of the paper. The 2014 AMS article r
 
 The old “polynomial Tetris” sketch came from working through the beginning of Duke’s article, especially the partition generating function
 
-[
-g(q)=sum_{nge 0}p(n)q^n=prod_{mge 1}(1-q^m)^{-1}.
-]
+\[
+g(q)=\sum_{n\ge 0}p(n)q^n=\prod_{m\ge 1}(1-q^m)^{-1}.
+\]
 
-Expanding the product factor by factor gives a literal combinatorial construction: each factor contributes a choice of how many parts of a given size occur. Visually, this can be treated as colored blocks accumulating into coefficients of powers of (q). That is the natural mathematical basis for the Tetris-like interaction in this repository.
+Expanding the product factor by factor gives a literal combinatorial construction: each factor contributes a choice of how many parts of a given size occur. Visually, this can be treated as colored blocks accumulating into coefficients of powers of \(q\). That is the natural mathematical basis for the Tetris-like interaction in this repository.
 
 ## Summary
 
 Duke’s article tells the story of the phrase **mock theta function** from Ramanujan’s final letter to Hardy in 1920 to the modern theory of harmonic Maass forms.
 
-Ramanujan did not give a modern axiomatic definition. Instead, he supplied examples of special (q)-series and described how they imitate ordinary theta functions near roots of unity while stubbornly failing to be ordinary theta functions themselves. The examples had striking identities and asymptotic behavior, but for decades the larger structure explaining them was unclear.
+Ramanujan did not give a modern axiomatic definition. Instead, he supplied examples of special \(q\)-series and described how they imitate ordinary theta functions near roots of unity while stubbornly failing to be ordinary theta functions themselves. The examples had striking identities and asymptotic behavior, but for decades the larger structure explaining them was unclear.
 
-The article starts with familiar objects from partition theory. The partition generating function is an infinite product, and classical theta functions provide another family of (q)-series with strong modular transformation laws. Ramanujan’s mock theta functions look tantalizingly similar to such modular objects, particularly when one studies their behavior as (q) approaches roots of unity.
+The article starts with familiar objects from partition theory. The partition generating function is an infinite product, and classical theta functions provide another family of \(q\)-series with strong modular transformation laws. Ramanujan’s mock theta functions look tantalizingly similar to such modular objects, particularly when one studies their behavior as \(q\) approaches roots of unity.
 
 A major early step was G. N. Watson’s work in the 1930s. Watson proved many of Ramanujan’s claims and developed the analytic theory of the examples, but the name “mock theta function” still described a phenomenon more than a settled class of functions.
 
@@ -44,31 +44,31 @@ The modern theory connects mock modular forms to subjects including partitions, 
 
 ### 1. Partitions as a product
 
-[
-prod_{mge1}(1-q^m)^{-1}
+\[
+\prod_{m\ge1}(1-q^m)^{-1}
 =
-prod_{mge1}(1+q^m+q^{2m}+cdots).
-]
+\prod_{m\ge1}(1+q^m+q^{2m}+\cdots).
+\]
 
-Choosing the term (q^{k m}) from the (m)-th factor means choosing (k) parts of size (m). The exponent of the resulting monomial is the integer being partitioned.
+Choosing the term \(q^{km}\) from the \(m\)-th factor means choosing \(k\) parts of size \(m\). The exponent of the resulting monomial is the integer being partitioned.
 
 This is the most immediate route from the article to “polynomial Tetris”: multiplication of truncated power series can be displayed as blocks whose horizontal position or height records degree and whose color records which factor supplied the contribution.
 
 ### 2. Theta functions
 
-Classical theta functions are (q)-series with precise transformation behavior under modular substitutions. Their coefficients, analytic continuation, asymptotics, and symmetries are tied together by this modular structure.
+Classical theta functions are \(q\)-series with precise transformation behavior under modular substitutions. Their coefficients, analytic continuation, asymptotics, and symmetries are tied together by this modular structure.
 
 ### 3. Ramanujan’s mock theta functions
 
-Ramanujan gave several families of (q)-series that behave near roots of unity somewhat like theta functions but cannot globally be replaced by a single ordinary theta function with the same behavior.
+Ramanujan gave several families of \(q\)-series that behave near roots of unity somewhat like theta functions but cannot globally be replaced by a single ordinary theta function with the same behavior.
 
 A standard example from the third-order family is
 
-[
-f(q)=1+sum_{nge1}
-rac{q^{n^2}}
-{(1+q)^2(1+q^2)^2cdots(1+q^n)^2}.
-]
+\[
+f(q)=1+\sum_{n\ge1}
+\frac{q^{n^2}}
+{(1+q)^2(1+q^2)^2\cdots(1+q^n)^2}.
+\]
 
 The important point for this project is not merely the closed formula: each denominator expands into a structured collection of power-series contributions that can again be visualized combinatorially.
 
@@ -78,13 +78,13 @@ The modern resolution adds a nonholomorphic correction to a mock modular form. T
 
 Schematically,
 
-[
-	ext{mock modular form}
+\[
+\text{mock modular form}
 +
-	ext{nonholomorphic correction}
+\text{nonholomorphic correction}
 =
-	ext{harmonic Maass form}.
-]
+\text{harmonic Maass form}.
+\]
 
 The slogan is only schematic; the actual weights, operators, multipliers, and normalizations matter.
 
@@ -98,12 +98,12 @@ A first executable interpretation should stay close to the algebra rather than s
 
 Possible visual grammar:
 
-- one color per Euler-product factor ((1-q^m)^{-1});
-- blocks of width or label (m) represent parts of size (m);
-- a stack represents one partition of (n);
-- collecting every stack of total size (n) illustrates the coefficient (p(n));
+- one color per Euler-product factor \((1-q^m)^{-1}\);
+- blocks of width or label \(m\) represent parts of size \(m\);
+- a stack represents one partition of \(n\);
+- collecting every stack of total size \(n\) illustrates the coefficient \(p(n)\);
 - a second mode can show polynomial multiplication directly, with each multiplication step adding a new colored layer;
-- later screens can replace the partition product with a truncated mock-theta (q)-series and compare its coefficients and root-of-unity behavior.
+- later screens can replace the partition product with a truncated mock-theta \(q\)-series and compare its coefficients and root-of-unity behavior.
 
 The useful idea from the old sketch is that the animation is not decoration around the formula. The block mechanics *are* the multiplication and coefficient bookkeeping.
 
@@ -120,7 +120,7 @@ These are better represented by links, public-domain transcriptions when provena
 
 For this repository, “mock theta” should mean two related things:
 
-1. the actual mathematics of Ramanujan’s (q)-series and their modern modular interpretation;
+1. the actual mathematics of Ramanujan’s \(q\)-series and their modern modular interpretation;
 2. the older visual experiment in which formal power-series multiplication becomes a block game.
 
 The second should remain mathematically faithful to the first rather than turning into a generic falling-block game with formulas pasted onto it.
