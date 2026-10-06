@@ -194,10 +194,3 @@ blogAdditionState : AdditionState
 blogAdditionState =
   Addition blogFivePanelOrder blogFivePanelTetris
 
-public export
-blogAdditionCoefficients :
-  coefficientsThrough 9 (stack MockTheta.Interaction.blogAdditionState)
-    =
-  [15, -5, -5, -4, -4, -3, 2, 2, 1, 1]
-blogAdditionCoefficients =
-  Refl
