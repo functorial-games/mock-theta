@@ -32,7 +32,7 @@ Then they multiply by \(1−q^n\):
 A_n(q)=(1−q^n)B_n(q)=B_n(q)−q^nB_n(q).
 \]
 
-This is why every panel consists of an unshifted copy and a copy shifted right by \(n\) columns with every sign reversed. The Idris module records those branches as `Unshifted` and `ShiftedNegated`.
+This is why every panel consists of an unshifted copy and a copy shifted right by \(n\) columns with every sign reversed. The Idris module records those branches as `Unshifted` and `Shifted_negated`.
 
 The first five checked coefficient rows are:
 
@@ -46,7 +46,7 @@ The first five checked coefficient rows are:
 
 The red-arrow step labelled **Tetris** is addition.
 
-`tetrisAdd left right` concatenates the signed cells and the renderer places equal degrees in the same vertical column.
+`tetris_add left right` concatenates the signed cells and the renderer places equal degrees in the same vertical column.
 
 Opposite signs are deliberately not deleted from the picture. The coloured cells remain visible so provenance survives. The numerical coefficient of degree \(d\) is obtained by summing the signs in that column.
 
@@ -58,7 +58,7 @@ The screenshot order is \(A_5,A_4,A_3,A_2,A_1\). Stacking them gives the checked
 15-5q-5q^2-4q^3-4q^4-3q^5+2q^6+2q^7+q^8+q^9.
 \]
 
-The Idris proof `blogFivePanelCoefficients` reduces the exact signed-cell construction to that exact coefficient list.
+The Idris proof `blog_five_panel_coefficients` reduces the exact signed-cell construction to that exact coefficient list.
 
 The type sketch does not silently identify this finite addition with any other infinite series or with mock-theta validity. Those are separate mathematical claims.
 
@@ -74,4 +74,4 @@ The Android layer may animate a whole panel downward, matching the red arrows. I
 
 ## Validation boundary
 
-A finite signed coefficient diagram is a calculation, not proof of mock modularity. `MockTheta.Validation` therefore classifies a `FiniteTetrisDiagram` as `Unverified`.
+A finite signed coefficient diagram is a calculation, not proof of mock modularity. `MockTheta.Validation` therefore classifies a `Finite_tetris_polynomial` as `Unverified`.
