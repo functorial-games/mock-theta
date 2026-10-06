@@ -11,18 +11,18 @@ main = do
   putStrLn "mock-theta typed shape-sum model"
   putStrLn
     ("factor 2 shape: " ++
-      show (allowedCoefficientsThrough 3 (Shape factor2)))
+      show (allowed_coefficients_through 3 (Shape factor_2)))
   putStrLn
     ("factor 5 shape: " ++
-      show (allowedCoefficientsThrough 9 (Shape factor5)))
+      show (allowed_coefficients_through 9 (Shape factor_5)))
   putStrLn
     ("blog five-shape Tetris sum: " ++
-      show (allowedCoefficientsThrough 9 blogFivePanelPolynomial))
+      show (allowed_coefficients_through 9 blog_five_panel_polynomial))
   putStrLn
     ("typed Tetris polynomial: " ++
-      statusName
-        (mockThetaStatus
-          (FiniteTetrisPolynomial blogFivePanelPolynomial)))
+      status_name
+        (mock_theta_status
+          (Finite_tetris_polynomial blog_five_panel_polynomial)))
   putStrLn
     ("Ramanujan third-order f: " ++
-      statusName (mockThetaStatus RamanujanThirdOrderF))
+      status_name (mock_theta_status Ramanujan_third_order_f))
