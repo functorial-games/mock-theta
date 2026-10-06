@@ -123,7 +123,7 @@ stack state =
 public export
 coefficient_in_state : Degree -> Addition_state -> Coefficient
 coefficient_in_state wanted state =
-  allowedCoefficientAt wanted (expression state)
+  allowed_coefficient_at wanted (expression state)
 
 -- -------------------------------------------------------------------------
 -- UI commands
@@ -144,7 +144,7 @@ data Command_kind
 
 public export
 data Ui_command : Command_kind -> Type where
-  MovePanel_preview :
+  Move_panel_preview :
        Factor_index
     -> Pixel_delta
     -> Ui_command Presentation_only
@@ -183,6 +183,6 @@ record Interaction_frame where
   target : Gesture_target
 
 public export
-blogAddition_state : Addition_state
-blogAddition_state =
-  Addition blogFivePanelPolynomial
+blog_addition_state : Addition_state
+blog_addition_state =
+  Addition blog_five_panel_polynomial
