@@ -225,7 +225,7 @@ blogFivePanelTetris =
 
 public export
 factor1Coefficients :
-  coefficientsThrough 1 (factorPanel factor1)
+  coefficientsThrough 1 (factorPanel MockTheta.Tetris.factor1)
     =
   [1, -1]
 factor1Coefficients =
@@ -233,7 +233,7 @@ factor1Coefficients =
 
 public export
 factor2Coefficients :
-  coefficientsThrough 3 (factorPanel factor2)
+  coefficientsThrough 3 (factorPanel MockTheta.Tetris.factor2)
     =
   [2, -1, -2, 1]
 factor2Coefficients =
@@ -241,7 +241,7 @@ factor2Coefficients =
 
 public export
 factor3Coefficients :
-  coefficientsThrough 5 (factorPanel factor3)
+  coefficientsThrough 5 (factorPanel MockTheta.Tetris.factor3)
     =
   [3, -1, -1, -3, 1, 1]
 factor3Coefficients =
@@ -249,7 +249,7 @@ factor3Coefficients =
 
 public export
 factor4Coefficients :
-  coefficientsThrough 7 (factorPanel factor4)
+  coefficientsThrough 7 (factorPanel MockTheta.Tetris.factor4)
     =
   [4, -1, -1, -1, -4, 1, 1, 1]
 factor4Coefficients =
@@ -257,7 +257,7 @@ factor4Coefficients =
 
 public export
 factor5Coefficients :
-  coefficientsThrough 9 (factorPanel factor5)
+  coefficientsThrough 9 (factorPanel MockTheta.Tetris.factor5)
     =
   [5, -1, -1, -1, -1, -5, 1, 1, 1, 1]
 factor5Coefficients =
@@ -269,7 +269,7 @@ factor5Coefficients =
 |||      +2q^6 +2q^7 +q^8 +q^9.
 public export
 blogFivePanelCoefficients :
-  coefficientsThrough 9 blogFivePanelTetris
+  coefficientsThrough 9 MockTheta.Tetris.blogFivePanelTetris
     =
   [15, -5, -5, -4, -4, -3, 2, 2, 1, 1]
 blogFivePanelCoefficients =
