@@ -26,11 +26,11 @@ If a drag is cancelled or released outside the addition area, no arithmetic occu
 
 The framebuffer derives geometry from mathematics:
 
-- cell degree -> horizontal coefficient column
-- cell order in a column -> vertical stack position
-- cell sign -> + or - glyph
-- panel factor -> colour family
-- provenance -> optional shade/detail
+- cell degree → horizontal coefficient column
+- cell order in a column → vertical stack position
+- cell sign → + or − glyph
+- panel factor → colour family
+- provenance → optional shade/detail
 
 Pixels never determine degree. Degree determines pixels.
 
