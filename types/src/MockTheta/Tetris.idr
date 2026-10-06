@@ -56,6 +56,27 @@ public export
 factor5 : FactorIndex
 factor5 = Factor 4
 
+||| These are the ONLY constructors for a polynomial admitted by the Tetris
+||| language.
+|||
+||| In particular, there is no constructor taking a coefficient list or a raw
+||| cell diagram. Every inhabited AllowedPolynomial is structurally a finite
+||| sum of permitted Shape values (with Zero as the empty sum).
+public export
+data AllowedPolynomial
+  = Zero
+  | Shape FactorIndex
+  | Add AllowedPolynomial AllowedPolynomial
+
+||| Safe convenience constructor: a list of factors still becomes only a sum
+||| of permitted shapes.
+public export
+shapeSum : List FactorIndex -> AllowedPolynomial
+shapeSum [] =
+  Zero
+shapeSum (factor :: rest) =
+  Add (Shape factor) (shapeSum rest)
+
 ||| In the blog drawings the input to the n-th coloured panel is
 |||
 |||   1 + (1-q) + (1-q^2) + ... + (1-q^(n-1)).
@@ -81,10 +102,10 @@ record SeedCell where
   seedSign : Sign
   seedOrigin : SeedOrigin
 
-||| A Cell is the mathematical "block" in the post.
+||| A Cell is a read/render view of the mathematical "block" in the post.
 |||
-||| It has no rotation, velocity, collision box, tetromino identity, or
-||| independent horizontal position. Its horizontal column IS its q-degree.
+||| A raw Cell or Diagram is NOT an AllowedPolynomial and there is no public
+||| conversion from arbitrary cells back to AllowedPolynomial.
 public export
 record Cell where
   constructor SignedCell
@@ -140,35 +161,29 @@ expandAll factor [] =
 expandAll factor (seed :: rest) =
   expandSeedCell factor seed ++ expandAll factor rest
 
-||| The exact coloured panel headed "1 - q^n times..." in the blog.
-|||
-||| Algebraically this is
-|||
-|||   (1-q^n) * [1 + (1-q) + ... + (1-q^(n-1))].
-|||
-||| The result remains expanded into signed unit cells instead of prematurely
-||| collapsing equal degrees into one coefficient.
+||| Render view of one permitted primitive Shape.
 public export
 factorPanel : FactorIndex -> Diagram
 factorPanel factor =
   expandAll factor (panelSeed factor)
 
-||| "Tetris" in the post means addition.
-|||
-||| Adding two pictures means putting their signed cells into the same degree
-||| columns. We deliberately DO NOT delete opposite signs: the coloured
-||| provenance stays visible, and the coefficient is read by summing signs.
+||| "Tetris" in the post means addition of diagrams.
+||| This is a derived rendering operation, not a constructor for
+||| AllowedPolynomial.
 public export
 tetrisAdd : Diagram -> Diagram -> Diagram
 tetrisAdd left right =
   left ++ right
 
+||| The only interpretation from an allowed formula into visible signed cells.
 public export
-tetrisPanels : List FactorIndex -> Diagram
-tetrisPanels [] =
+diagram : AllowedPolynomial -> Diagram
+diagram Zero =
   []
-tetrisPanels (factor :: rest) =
-  tetrisAdd (factorPanel factor) (tetrisPanels rest)
+diagram (Shape factor) =
+  factorPanel factor
+diagram (Add left right) =
+  tetrisAdd (diagram left) (diagram right)
 
 public export
 coefficientAt : Degree -> Diagram -> Coefficient
@@ -180,6 +195,11 @@ coefficientAt wanted (cell :: rest) =
            then signValue (sign cell)
            else 0
    in contribution + coefficientAt wanted rest
+
+public export
+allowedCoefficientAt : Degree -> AllowedPolynomial -> Coefficient
+allowedCoefficientAt wanted polynomial =
+  coefficientAt wanted (diagram polynomial)
 
 public export
 columnCells : Degree -> Diagram -> List Cell
@@ -196,16 +216,24 @@ coefficientsFrom :
   -> (count : Nat)
   -> Diagram
   -> List Coefficient
-coefficientsFrom nextDegree Z diagram =
+coefficientsFrom nextDegree Z diagramView =
   []
-coefficientsFrom nextDegree (S count) diagram =
-  coefficientAt nextDegree diagram ::
-  coefficientsFrom (S nextDegree) count diagram
+coefficientsFrom nextDegree (S count) diagramView =
+  coefficientAt nextDegree diagramView ::
+  coefficientsFrom (S nextDegree) count diagramView
 
 public export
 coefficientsThrough : Degree -> Diagram -> List Coefficient
-coefficientsThrough lastDegree diagram =
-  coefficientsFrom 0 (S lastDegree) diagram
+coefficientsThrough lastDegree diagramView =
+  coefficientsFrom 0 (S lastDegree) diagramView
+
+public export
+allowedCoefficientsThrough :
+     Degree
+  -> AllowedPolynomial
+  -> List Coefficient
+allowedCoefficientsThrough lastDegree polynomial =
+  coefficientsThrough lastDegree (diagram polynomial)
 
 ||| The blog lays the five coloured panels out in this order before the red
 ||| "Tetris" arrows: n=5,4,3,2,1.
@@ -214,10 +242,44 @@ blogFivePanelOrder : List FactorIndex
 blogFivePanelOrder =
   [factor5, factor4, factor3, factor2, factor1]
 
+||| The allowed formula itself. It is impossible to construct this value from
+||| arbitrary coefficients; it is visibly a sum of five permitted Shapes.
+public export
+blogFivePanelPolynomial : AllowedPolynomial
+blogFivePanelPolynomial =
+  shapeSum blogFivePanelOrder
+
 public export
 blogFivePanelTetris : Diagram
 blogFivePanelTetris =
-  tetrisPanels blogFivePanelOrder
+  diagram blogFivePanelPolynomial
+
+-- -------------------------------------------------------------------------
+-- Laws showing that AllowedPolynomial really means "sum of permitted shapes".
+-- -------------------------------------------------------------------------
+
+public export
+zeroDiagramLaw :
+  diagram Zero = []
+zeroDiagramLaw =
+  Refl
+
+public export
+shapeDiagramLaw :
+     (factor : FactorIndex)
+  -> diagram (Shape factor) = factorPanel factor
+shapeDiagramLaw factor =
+  Refl
+
+public export
+additionDiagramLaw :
+     (left : AllowedPolynomial)
+  -> (right : AllowedPolynomial)
+  -> diagram (Add left right)
+     =
+     tetrisAdd (diagram left) (diagram right)
+additionDiagramLaw left right =
+  Refl
 
 -- -------------------------------------------------------------------------
 -- Checked arithmetic from the supplied screenshots.
@@ -225,7 +287,7 @@ blogFivePanelTetris =
 
 public export
 factor1Coefficients :
-  coefficientsThrough 1 (factorPanel MockTheta.Tetris.factor1)
+  allowedCoefficientsThrough 1 (Shape MockTheta.Tetris.factor1)
     =
   [1, -1]
 factor1Coefficients =
@@ -233,7 +295,7 @@ factor1Coefficients =
 
 public export
 factor2Coefficients :
-  coefficientsThrough 3 (factorPanel MockTheta.Tetris.factor2)
+  allowedCoefficientsThrough 3 (Shape MockTheta.Tetris.factor2)
     =
   [2, -1, -2, 1]
 factor2Coefficients =
@@ -241,7 +303,7 @@ factor2Coefficients =
 
 public export
 factor3Coefficients :
-  coefficientsThrough 5 (factorPanel MockTheta.Tetris.factor3)
+  allowedCoefficientsThrough 5 (Shape MockTheta.Tetris.factor3)
     =
   [3, -1, -1, -3, 1, 1]
 factor3Coefficients =
@@ -249,7 +311,7 @@ factor3Coefficients =
 
 public export
 factor4Coefficients :
-  coefficientsThrough 7 (factorPanel MockTheta.Tetris.factor4)
+  allowedCoefficientsThrough 7 (Shape MockTheta.Tetris.factor4)
     =
   [4, -1, -1, -1, -4, 1, 1, 1]
 factor4Coefficients =
@@ -257,19 +319,15 @@ factor4Coefficients =
 
 public export
 factor5Coefficients :
-  coefficientsThrough 9 (factorPanel MockTheta.Tetris.factor5)
+  allowedCoefficientsThrough 9 (Shape MockTheta.Tetris.factor5)
     =
   [5, -1, -1, -1, -1, -5, 1, 1, 1, 1]
 factor5Coefficients =
   Refl
 
-||| This is the coefficient row underneath the final stacked picture:
-|||
-|||   15 -5q -5q^2 -4q^3 -4q^4 -3q^5
-|||      +2q^6 +2q^7 +q^8 +q^9.
 public export
 blogFivePanelCoefficients :
-  coefficientsThrough 9 MockTheta.Tetris.blogFivePanelTetris
+  allowedCoefficientsThrough 9 MockTheta.Tetris.blogFivePanelPolynomial
     =
   [15, -5, -5, -4, -4, -3, 2, 2, 1, 1]
 blogFivePanelCoefficients =
