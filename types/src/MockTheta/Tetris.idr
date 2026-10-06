@@ -1,7 +1,6 @@
 module MockTheta.Tetris
 
 %default total
-%auto_implicit off
 
 public export
 Degree : Type
