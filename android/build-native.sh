@@ -25,11 +25,7 @@ if [[ -z "$ndk" ]]; then
         echo 'ANDROID_NDK_HOME or ANDROID_HOME is required' >&2
         exit 1
     }
-    ndk=$(
-        find "$android_home/ndk" -mindepth 1 -maxdepth 1 -type d 2>/dev/null |
-            sort -V |
-            tail -n 1
-    )
+    ndk=$(find "$android_home/ndk" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -n 1)
 fi
 
 [[ -d "$ndk" ]] || {
@@ -37,10 +33,7 @@ fi
     exit 1
 }
 
-toolchain=$(
-    find "$ndk/toolchains/llvm/prebuilt" -mindepth 1 -maxdepth 1 -type d |
-        head -n 1
-)
+toolchain=$(find "$ndk/toolchains/llvm/prebuilt" -mindepth 1 -maxdepth 1 -type d | head -n 1)
 [[ -n "$toolchain" ]] || {
     echo 'Android NDK LLVM toolchain not found' >&2
     exit 1
@@ -60,17 +53,39 @@ done
 
 mkdir -p "$(dirname -- "$output")"
 
-link_alignment=()
+compiler_args=(
+    -std=c11
+    -O2
+    -fPIC
+    -shared
+    -Wall
+    -Wextra
+    -Werror
+    -Wno-unused-parameter
+    -I "$glue_dir"
+)
+
+link_args=(
+    -Wl,--no-undefined
+    -Wl,-soname,libmocktheta.so
+    -landroid
+    -llog
+)
+
 case "$abi" in
     arm64-v8a|x86_64)
-        link_alignment=(
+        link_args+=(
             -Wl,-z,max-page-size=16384
             -Wl,-z,common-page-size=16384
         )
         ;;
 esac
 
-"$clang"     -std=c11     -O2     -fPIC     -shared     -Wall     -Wextra     -Werror     -I "$glue_dir"     "$repo_root/android/native/mock_theta_tetris.c"     "$glue_source"     -Wl,--no-undefined     -Wl,-soname,libmocktheta.so     "${link_alignment[@]}"     -landroid     -llog     -o "$output"
+"$clang" "${compiler_args[@]}" \
+    "$repo_root/android/native/mock_theta_tetris.c" \
+    "$glue_source" \
+    "${link_args[@]}" \
+    -o "$output"
 
 symbols=$("$readelf" -Ws "$output")
 grep -Fq 'ANativeActivity_onCreate' <<<"$symbols"
