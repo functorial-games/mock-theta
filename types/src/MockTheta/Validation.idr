@@ -4,12 +4,12 @@ import MockTheta.Tetris
 
 %default total
 
-||| Tetris diagrams are finite signed coefficient pictures. They are useful
-||| calculations and visualizations, but drawing/adding one does not establish
-||| an infinite analytic or modular property.
+||| A Tetris expression can enter validation only as an AllowedPolynomial.
+||| Arbitrary Diagram values and arbitrary coefficient lists cannot masquerade
+||| as Tetris-expressible formulas.
 public export
 data QSeriesSpec
-  = FiniteTetrisDiagram Diagram
+  = FiniteTetrisPolynomial AllowedPolynomial
   | PartitionGeneratingSeries Nat
   | RamanujanThirdOrderF
   | UserTruncation (List Coefficient)
@@ -32,7 +32,7 @@ mockThetaStatus RamanujanThirdOrderF =
   ProvenMockTheta
 mockThetaStatus (PartitionGeneratingSeries cutoff) =
   KnownNonMockTheta
-mockThetaStatus (FiniteTetrisDiagram diagram) =
+mockThetaStatus (FiniteTetrisPolynomial polynomial) =
   Unverified
 mockThetaStatus (UserTruncation coefficients) =
   Unverified
@@ -50,14 +50,17 @@ validateMockTheta RamanujanThirdOrderF =
   Just RamanujanThirdOrderFValidated
 validateMockTheta (PartitionGeneratingSeries cutoff) =
   Nothing
-validateMockTheta (FiniteTetrisDiagram diagram) =
+validateMockTheta (FiniteTetrisPolynomial polynomial) =
   Nothing
 validateMockTheta (UserTruncation coefficients) =
   Nothing
 
 public export
 finiteTetrisDoesNotCertify :
-  validateMockTheta (FiniteTetrisDiagram blogFivePanelTetris) = Nothing
+  validateMockTheta
+    (FiniteTetrisPolynomial blogFivePanelPolynomial)
+    =
+  Nothing
 finiteTetrisDoesNotCertify =
   Refl
 
