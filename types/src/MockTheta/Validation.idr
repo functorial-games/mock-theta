@@ -4,21 +4,16 @@ import MockTheta.Tetris
 
 %default total
 
-||| A mathematical q-series object that can be presented to the validator.
-|||
-||| A single FallingPiece is deliberately not a QSeriesSpec. A Tetris block is
-||| a contribution to a calculation, not itself a q-series.
+||| Tetris diagrams are finite signed coefficient pictures. They are useful
+||| calculations and visualizations, but drawing/adding one does not establish
+||| an infinite analytic or modular property.
 public export
 data QSeriesSpec
-  = TetrisProduct ProductRecipe
+  = FiniteTetrisDiagram Diagram
   | PartitionGeneratingSeries Nat
   | RamanujanThirdOrderF
   | UserTruncation (List Coefficient)
 
-||| Conservative public result.
-|||
-||| "Unverified" is important: failure to recognize a series is not a proof
-||| that the series can never have mock-modular structure.
 public export
 data MockThetaStatus
   = ProvenMockTheta
@@ -37,27 +32,16 @@ mockThetaStatus RamanujanThirdOrderF =
   ProvenMockTheta
 mockThetaStatus (PartitionGeneratingSeries cutoff) =
   KnownNonMockTheta
-mockThetaStatus (TetrisProduct recipe) =
+mockThetaStatus (FiniteTetrisDiagram diagram) =
   Unverified
 mockThetaStatus (UserTruncation coefficients) =
   Unverified
 
-||| Evidence is indexed by the exact series being certified.
-|||
-||| There is intentionally no constructor for TetrisProduct, a random
-||| coefficient list, or one summand of Ramanujan's f(q). Merely being
-||| constructible by the Tetris engine cannot promote an expression to a mock
-||| theta function.
 public export
 data ValidatedMockTheta : QSeriesSpec -> Type where
   RamanujanThirdOrderFValidated :
     ValidatedMockTheta RamanujanThirdOrderF
 
-||| Conservative validator.
-|||
-||| At this stage it accepts only series for which this module carries explicit
-||| mathematical evidence. Future named mock theta functions can be added as
-||| new QSeriesSpec constructors plus corresponding evidence constructors.
 public export
 validateMockTheta :
      (series : QSeriesSpec)
@@ -66,35 +50,32 @@ validateMockTheta RamanujanThirdOrderF =
   Just RamanujanThirdOrderFValidated
 validateMockTheta (PartitionGeneratingSeries cutoff) =
   Nothing
-validateMockTheta (TetrisProduct recipe) =
+validateMockTheta (FiniteTetrisDiagram diagram) =
   Nothing
 validateMockTheta (UserTruncation coefficients) =
   Nothing
 
-||| A random legal Tetris product is not automatically promoted.
 public export
-tetrisDoesNotImplyMockTheta :
-  validateMockTheta (TetrisProduct (partitionRecipe 4)) = Nothing
-tetrisDoesNotImplyMockTheta = Refl
+finiteTetrisDoesNotCertify :
+  validateMockTheta (FiniteTetrisDiagram blogFivePanelTetris) = Nothing
+finiteTetrisDoesNotCertify =
+  Refl
 
-||| The ordinary partition generating series is explicitly classified
-||| separately from mock theta functions.
 public export
 partitionIsNotMockTheta :
   mockThetaStatus (PartitionGeneratingSeries 8) = KnownNonMockTheta
-partitionIsNotMockTheta = Refl
+partitionIsNotMockTheta =
+  Refl
 
-||| A finite coefficient prefix cannot certify an infinite analytic/modular
-||| property, even if it happens to match a known mock theta function for a
-||| while.
 public export
 finitePrefixDoesNotCertify :
   validateMockTheta (UserTruncation [1, 1, -2, 3, 5]) = Nothing
-finitePrefixDoesNotCertify = Refl
+finitePrefixDoesNotCertify =
+  Refl
 
-||| The named full Ramanujan function is accepted.
 public export
 ramanujanFValidates :
   validateMockTheta RamanujanThirdOrderF =
     Just RamanujanThirdOrderFValidated
-ramanujanFValidates = Refl
+ramanujanFValidates =
+  Refl
