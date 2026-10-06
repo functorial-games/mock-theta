@@ -272,11 +272,11 @@ partitionExample =
       NoChoices)
 
 public export
-partitionExampleDegree : choicesDegree partitionExample = 4
+partitionExampleDegree : choicesDegree MockTheta.Tetris.partitionExample = 4
 partitionExampleDegree = Refl
 
 public export
-partitionExampleCoefficient : choicesCoefficient partitionExample = 1
+partitionExampleCoefficient : choicesCoefficient MockTheta.Tetris.partitionExample = 1
 partitionExampleCoefficient = Refl
 
 public export
@@ -288,9 +288,9 @@ mockDenominatorExample =
       NoChoices)
 
 public export
-mockDenominatorDegree : choicesDegree mockDenominatorExample = 5
+mockDenominatorDegree : choicesDegree MockTheta.Tetris.mockDenominatorExample = 5
 mockDenominatorDegree = Refl
 
 public export
-mockDenominatorCoefficient : choicesCoefficient mockDenominatorExample = -6
+mockDenominatorCoefficient : choicesCoefficient MockTheta.Tetris.mockDenominatorExample = -6
 mockDenominatorCoefficient = Refl
