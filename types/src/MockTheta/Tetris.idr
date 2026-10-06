@@ -34,7 +34,7 @@ data Factor_index
 
 public export
 factor_degree : Factor_index -> Degree
-factor_degree (Factor zeroBased) = S zeroBased
+factor_degree (Factor zero_based) = S zero_based
 
 public export
 factor_1 : Factor_index
@@ -120,26 +120,26 @@ Diagram : Type
 Diagram = List Cell
 
 private
-previousSeed_cells : (remaining : Nat) -> (next_degree : Degree) -> List Seed_cell
-previousSeed_cells Z next_degree =
+previous_seed_cells : (remaining : Nat) -> (next_degree : Degree) -> List Seed_cell
+previous_seed_cells Z next_degree =
   []
-previousSeed_cells (S remaining) next_degree =
+previous_seed_cells (S remaining) next_degree =
   Seed 0 Plus (Previous_euler_factor next_degree) ::
   Seed next_degree Minus (Previous_euler_factor next_degree) ::
-  previousSeed_cells remaining (S next_degree)
+  previous_seed_cells remaining (S next_degree)
 
 ||| Unit-square expansion of
 |||
 |||   1 + sum_{j=1}^{n-1} (1−q^j).
 public export
 panel_seed : Factor_index -> List Seed_cell
-panel_seed (Factor zeroBased) =
+panel_seed (Factor zero_based) =
   Seed 0 Plus Leading_one ::
-  previousSeed_cells zeroBased 1
+  previous_seed_cells zero_based 1
 
 private
-expandSeed_cell : Factor_index -> Seed_cell -> Diagram
-expandSeed_cell factor seed =
+expand_seed_cell : Factor_index -> Seed_cell -> Diagram
+expand_seed_cell factor seed =
   [ Signed_cell
       (seed_degree seed)
       (seed_sign seed)
@@ -159,7 +159,7 @@ expand_all : Factor_index -> List Seed_cell -> Diagram
 expand_all factor [] =
   []
 expand_all factor (seed :: rest) =
-  expandSeed_cell factor seed ++ expand_all factor rest
+  expand_seed_cell factor seed ++ expand_all factor rest
 
 ||| Render view of one permitted primitive Shape.
 public export
