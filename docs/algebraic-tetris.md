@@ -11,7 +11,7 @@ The supplied blog screenshots are the reference fixture for this model.
 A visible square is one signed unit contribution to one coefficient:
 
 \[
-+q^d \qquad\text{or}\qquad -q^d.
++q^d \qquad\text{or}\qquad −q^d.
 \]
 
 Its horizontal position is therefore not free geometry. It is the degree \(d\).
@@ -20,16 +20,16 @@ Each square also carries provenance: which coloured panel produced it and which 
 
 ## The coloured panels in the screenshots
 
-For the panel headed \(1-q^n\), the screenshots first form
+For the panel headed \(1−q^n\), the screenshots first form
 
 \[
-B_n(q)=1+\sum_{j=1}^{n-1}(1-q^j)=n-\sum_{j=1}^{n-1}q^j.
+B_n(q)=1+\sum_{j=1}^{n-1}(1−q^j)=n-\sum_{j=1}^{n-1}q^j.
 \]
 
-Then they multiply by \(1-q^n\):
+Then they multiply by \(1−q^n\):
 
 \[
-A_n(q)=(1-q^n)B_n(q)=B_n(q)-q^nB_n(q).
+A_n(q)=(1−q^n)B_n(q)=B_n(q)−q^nB_n(q).
 \]
 
 This is why every panel consists of an unshifted copy and a copy shifted right by \(n\) columns with every sign reversed. The Idris module records those branches as `Unshifted` and `ShiftedNegated`.
@@ -66,8 +66,8 @@ The type sketch does not silently identify this finite addition with any other i
 
 ```text
 Idris: exact signed-cell construction and screenshot fixtures
-  -> Lua/small C state: panel sequencing and inspection
-  -> C framebuffer: degree -> x, stack order -> y, colours and +/- glyphs
+  → Lua/small C state: panel sequencing and inspection
+  → C framebuffer: degree → x, stack order → y, colours and +/- glyphs
 ```
 
 The Android layer may animate a whole panel downward, matching the red arrows. It may not invent rotation, collision, tetromino shapes, or independent block motion.
