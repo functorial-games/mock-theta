@@ -26,6 +26,12 @@ data MockThetaStatus
   | Unverified
 
 public export
+statusName : MockThetaStatus -> String
+statusName ProvenMockTheta = "proven mock theta"
+statusName KnownNonMockTheta = "known non-mock-theta"
+statusName Unverified = "unverified"
+
+public export
 mockThetaStatus : QSeriesSpec -> MockThetaStatus
 mockThetaStatus RamanujanThirdOrderF =
   ProvenMockTheta
