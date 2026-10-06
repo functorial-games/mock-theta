@@ -1,15 +1,9 @@
-name: Android APK
+name: ICK Android APK
 
 on:
   pull_request:
     paths:
-      - "android/**"
-      - "ci/build-toolchain.tsv"
-      - ".github/workflows/android-apk.yml"
-  push:
-    branches:
-      - main
-    paths:
+      - "icky/**"
       - "android/**"
       - "ci/build-toolchain.tsv"
       - ".github/workflows/android-apk.yml"
@@ -18,12 +12,97 @@ on:
 permissions:
   contents: read
 
+env:
+  ICK_COMMIT: 79eccb8ff232e05bdbb9e345fc224f251636b43f
+  ANDROID_NDK_VERSION: 29.0.14206865
+  ANDROID_API: "21"
+
 jobs:
   apk:
     runs-on: ubuntu-24.04
+    timeout-minutes: 150
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out Mock Theta
+        uses: actions/checkout@v4
+
+      - name: Check host arithmetic fixture
+        run: bash icky/test.sh
+
+      - name: Check out ICK and pinned GCC reference
+        uses: actions/checkout@v4
+        with:
+          repository: dilapidated-shed/ick
+          ref: ${{ env.ICK_COMMIT }}
+          path: .ick
+          submodules: true
+          persist-credentials: false
+
+      - name: Materialize ICK source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          (
+            cd .ick
+            . ick/SOURCE.lock
+            test "$(git -C gcc rev-parse HEAD)" = "$gcc_commit"
+            sh ick/materialize.sh gcc source
+          )
+
+      - name: Install ICK build tools
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y             build-essential             flex             bison             texinfo             libgmp-dev             libmpfr-dev             libmpc-dev             libisl-dev             libzstd-dev             binutils-arm-linux-gnueabi
+
+      - name: Build ARMv7 ICK C compiler
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          target_as=$(command -v arm-linux-gnueabi-as)
+          target_ld=$(command -v arm-linux-gnueabi-ld)
+
+          mkdir -p build/ick-compiler build/ick-stage
+
+          cd build/ick-compiler
+
+          "$GITHUB_WORKSPACE/.ick/source/configure"             --target=arm-linux-gnueabi             --prefix="$GITHUB_WORKSPACE/build/ick-stage"             --with-as="$target_as"             --with-ld="$target_ld"             --enable-languages=c             --disable-bootstrap             --disable-multilib             --disable-nls             --disable-shared             --disable-threads             --without-headers             --disable-libatomic             --disable-libgomp             --disable-libquadmath             --disable-libssp             --disable-libvtv
+
+          make -j2 all-gcc
+          make install-gcc
+
+          "$GITHUB_WORKSPACE/build/ick-stage/bin/arm-linux-gnueabi-gcc"             --version
+
+      - name: Compile Tetris core with ICK
+        env:
+          ICK_CC: ${{ github.workspace }}/build/ick-stage/bin/arm-linux-gnueabi-gcc
+          ICK_READELF: arm-linux-gnueabi-readelf
+          ICK_NM: arm-linux-gnueabi-nm
+        run: |
+          bash icky/build-armv7.sh             build/ick/armeabi-v7a/tetris_core.o
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android build inputs
+        run: |
+          sdkmanager             "platforms;android-36"             "build-tools;36.0.0"             "ndk;${ANDROID_NDK_VERSION}"
+
+      - name: Link NativeActivity library
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.ANDROID_NDK_VERSION }}
+          ANDROID_ABI: armeabi-v7a
+          ANDROID_API: ${{ env.ANDROID_API }}
+        run: |
+          bash android/build-native.sh             build/ick/armeabi-v7a/tetris_core.o             build/android/armeabi-v7a/libmocktheta.so
 
       - name: Check out stable public test signer
         uses: actions/checkout@v4
@@ -45,50 +124,26 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: isomorphisms/ai-ci
-          ref: 899cd561cf4c8e8654ee1466c0b3eaff1636a25c
+          ref: 5404944497954137310967d3a7191340cf882030
           path: .signing-policy
           sparse-checkout: android-signing/identities.tsv
           sparse-checkout-cone-mode: false
 
-      - name: Load registered Mock Theta test signer
+      - name: Load registered Functorial Mock Theta signer
         shell: bash
         run: |
           set -Eeuo pipefail
           registry=.signing-policy/android-signing/identities.tsv
           signer=$(
-            awk -F '\t'               '$1 == "org.isomorphisms.mocktheta" && $2 == "test" { print $3 }'               "$registry"
+            awk -F '\t'               '$1 == "org.functorialgames.mocktheta" && $2 == "test" { print $3 }'               "$registry"
           )
           count=$(printf '%s\n' "$signer" | sed '/^$/d' | wc -l)
-          [[ $count -eq 1 ]] || {
-            echo "Mock Theta test signer registry entry count is $count" >&2
-            exit 1
-          }
-          printf 'ANDROID_EXPECTED_CERT_SHA256=%s\n' "$signer" >> "$GITHUB_ENV"
+          [[ $count -eq 1 ]]
+          printf 'ANDROID_EXPECTED_CERT_SHA256=%s\n' "$signer"             >> "$GITHUB_ENV"
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
-
-      - name: Install Android build inputs
-        run: |
-          sdkmanager             "platforms;android-36"             "build-tools;36.0.0"             "ndk;29.0.14206865"
-
-      - name: Build native library
+      - name: Package signed APK
         env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/29.0.14206865
-          ANDROID_ABI: armeabi-v7a
-          ANDROID_API: "21"
-        run: |
-          bash android/build-native.sh             build/android/armeabi-v7a/libmocktheta.so
-
-      - name: Package signed NativeActivity APK
-        env:
-          ANDROID_PACKAGE_ID: org.isomorphisms.mocktheta
+          ANDROID_PACKAGE_ID: org.functorialgames.mocktheta
           ANDROID_VERSION_CODE: "1"
           ANDROID_VERSION_NAME: "0.1.0"
           ANDROID_MIN_SDK: "21"
@@ -101,35 +156,39 @@ jobs:
           ANDROID_KEY_PASSWORD: wegert-debug
           ANDROID_SOURCE_COMMIT: ${{ github.sha }}
         run: |
-          bash .android-ndk/apk/build-nativeactivity-apk.sh             android/AndroidManifest.xml             build/android/armeabi-v7a/libmocktheta.so             armeabi-v7a             build/android/mock-theta-armeabi-v7a.apk
+          bash .android-ndk/apk/build-nativeactivity-apk.sh             android/AndroidManifest.xml             build/android/armeabi-v7a/libmocktheta.so             armeabi-v7a             build/android/mock-theta-icky-armeabi-v7a.apk
 
       - name: Mandatory Android producer gate
-        uses: isomorphisms/ai-ci/android-producer@899cd561cf4c8e8654ee1466c0b3eaff1636a25c
+        uses: isomorphisms/ai-ci/android-producer@5404944497954137310967d3a7191340cf882030
         with:
-          apk: build/android/mock-theta-armeabi-v7a.apk
+          apk: build/android/mock-theta-icky-armeabi-v7a.apk
           root: .
-          packager-receipt: build/android/mock-theta-armeabi-v7a.receipt.tsv
+          packager-receipt: build/android/mock-theta-icky-armeabi-v7a.receipt.tsv
           packager-root: .android-ndk
           expected-abi: armeabi-v7a
           lane: test
           require-no-dex: "true"
-          receipt-output: build/android/mock-theta-armeabi-v7a.producer.tsv
+          receipt-output: build/android/mock-theta-icky-armeabi-v7a.producer.tsv
 
-      - name: Record APK contents
+      - name: Record evidence
+        shell: bash
         run: |
-          unzip -l build/android/mock-theta-armeabi-v7a.apk             > build/android/mock-theta-armeabi-v7a.contents.txt
-          sha256sum build/android/mock-theta-armeabi-v7a.apk             > build/android/mock-theta-armeabi-v7a.sha256
-          grep -Fq "lib/armeabi-v7a/libmocktheta.so"             build/android/mock-theta-armeabi-v7a.contents.txt
-          ! grep -Eq "classes[0-9]*\.dex"             build/android/mock-theta-armeabi-v7a.contents.txt
+          unzip -l build/android/mock-theta-icky-armeabi-v7a.apk             > build/android/mock-theta-icky-armeabi-v7a.contents.txt
+          sha256sum build/android/mock-theta-icky-armeabi-v7a.apk             > build/android/mock-theta-icky-armeabi-v7a.sha256
+          grep -Fq 'lib/armeabi-v7a/libmocktheta.so'             build/android/mock-theta-icky-armeabi-v7a.contents.txt
+          ! grep -Eq 'classes[0-9]*\.dex'             build/android/mock-theta-icky-armeabi-v7a.contents.txt
 
-      - name: Retain first phone APK
+      - name: Retain ICK APK
         uses: actions/upload-artifact@v4
         with:
-          name: mock-theta-first-apk
+          name: mock-theta-icky-apk
           path: |
-            build/android/mock-theta-armeabi-v7a.apk
-            build/android/mock-theta-armeabi-v7a.receipt.tsv
-            build/android/mock-theta-armeabi-v7a.producer.tsv
-            build/android/mock-theta-armeabi-v7a.contents.txt
-            build/android/mock-theta-armeabi-v7a.sha256
+            build/android/mock-theta-icky-armeabi-v7a.apk
+            build/android/mock-theta-icky-armeabi-v7a.receipt.tsv
+            build/android/mock-theta-icky-armeabi-v7a.producer.tsv
+            build/android/mock-theta-icky-armeabi-v7a.contents.txt
+            build/android/mock-theta-icky-armeabi-v7a.sha256
+            build/ick/armeabi-v7a/tetris_core.elf.txt
+            build/ick/armeabi-v7a/tetris_core.attributes.txt
+            build/ick/armeabi-v7a/tetris_core.undefined.txt
           if-no-files-found: error

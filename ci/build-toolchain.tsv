@@ -1,2 +1,3 @@
 build_id	target	toolchain	ick_revision	ick_status	ick_evidence
-mock-theta-native-apk	armeabi-v7a	ndk	79eccb8ff232e05bdbb9e345fc224f251636b43f	gap:nativeactivity-framebuffer-app-not-qualified-by-ick	android/build-native.sh plus android-NDK direct NativeActivity packager
+mock-theta-tetris-core	armeabi-v7a	ick	79eccb8ff232e05bdbb9e345fc224f251636b43f	qualified	dilapidated-shed/ick Android ARMv7 leaf-object qualification plus app host arithmetic fixtures
+mock-theta-nativeactivity-shim	armeabi-v7a	ndk	79eccb8ff232e05bdbb9e345fc224f251636b43f	gap:Android-headers-sysroot-and-final-link-remain-NDK	ICK qualification explicitly leaves Android platform APIs and APK linking outside the ICK leaf-object boundary
