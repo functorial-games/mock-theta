@@ -9,45 +9,45 @@ import MockTheta.Tetris
 -- -------------------------------------------------------------------------
 
 public export
-record PixelPoint where
+record Pixel_point where
   constructor Pixel
-  pixelX : Int
-  pixelY : Int
+  pixel_x : Int
+  pixel_y : Int
 
 public export
-record PixelDelta where
+record Pixel_delta where
   constructor Delta
-  deltaX : Int
-  deltaY : Int
+  delta_x : Int
+  delta_y : Int
 
 public export
-record FramebufferSurface where
+record Framebuffer_surface where
   constructor Surface
-  widthPixels : Nat
-  heightPixels : Nat
-  stridePixels : Nat
+  width_pixels : Nat
+  height_pixels : Nat
+  stride_pixels : Nat
 
 public export
-data PointerPhase
-  = PointerDown
-  | PointerMove
-  | PointerUp
-  | PointerCancel
+data Pointer_phase
+  = Pointer_down
+  | Pointer_move
+  | Pointer_up
+  | Pointer_cancel
 
 public export
-record PointerSample where
+record Pointer_sample where
   constructor Pointer
-  pointerNumber : Nat
-  phase : PointerPhase
-  position : PixelPoint
-  eventTimeMillis : Nat
+  pointer_number : Nat
+  phase : Pointer_phase
+  position : Pixel_point
+  event_time_millis : Nat
 
 public export
-data NdkEvent
-  = Touch PointerSample
-  | SurfaceChanged FramebufferSurface
-  | AppPaused
-  | AppResumed
+data Ndk_event
+  = Touch Pointer_sample
+  | Surface_changed Framebuffer_surface
+  | App_paused
+  | App_resumed
 
 -- -------------------------------------------------------------------------
 -- What may move on screen
@@ -56,73 +56,73 @@ data NdkEvent
 ||| A whole primitive Shape may be animated toward the addition stack.
 ||| The offset is presentation state only.
 public export
-record PanelPreview (factor : FactorIndex) where
+record Panel_preview (factor : Factor_index) where
   constructor Preview
-  offset : PixelDelta
+  offset : Pixel_delta
 
 public export
-previewDiagram :
-     {factor : FactorIndex}
-  -> PanelPreview factor
+preview_diagram :
+     {factor : Factor_index}
+  -> Panel_preview factor
   -> Diagram
-previewDiagram {factor} preview =
+preview_diagram {factor} preview =
   diagram (Shape factor)
 
 private
-addDelta : PixelDelta -> PixelDelta -> PixelDelta
-addDelta (Delta x1 y1) (Delta x2 y2) =
+add_delta : Pixel_delta -> Pixel_delta -> Pixel_delta
+add_delta (Delta x1 y1) (Delta x2 y2) =
   Delta (x1 + x2) (y1 + y2)
 
 public export
-movePreview :
-     {factor : FactorIndex}
-  -> PixelDelta
-  -> PanelPreview factor
-  -> PanelPreview factor
-movePreview delta preview =
-  Preview (addDelta (offset preview) delta)
+move_preview :
+     {factor : Factor_index}
+  -> Pixel_delta
+  -> Panel_preview factor
+  -> Panel_preview factor
+move_preview delta preview =
+  Preview (add_delta (offset preview) delta)
 
 public export
-previewMotionPreservesMathematics :
-     {factor : FactorIndex}
-  -> (delta : PixelDelta)
-  -> (preview : PanelPreview factor)
-  -> previewDiagram (movePreview delta preview)
+preview_motion_preserves_mathematics :
+     {factor : Factor_index}
+  -> (delta : Pixel_delta)
+  -> (preview : Panel_preview factor)
+  -> preview_diagram (move_preview delta preview)
      =
-     previewDiagram preview
-previewMotionPreservesMathematics delta preview =
+     preview_diagram preview
+preview_motion_preserves_mathematics delta preview =
   Refl
 
 -- -------------------------------------------------------------------------
--- "Tetris" state: the state itself stores an AllowedPolynomial.
+-- "Tetris" state: the state itself stores an Allowed_polynomial.
 -- No raw cell list is authoritative.
 -- -------------------------------------------------------------------------
 
 public export
-record AdditionState where
+record Addition_state where
   constructor Addition
-  expression : AllowedPolynomial
+  expression : Allowed_polynomial
 
 public export
-emptyAddition : AdditionState
-emptyAddition =
+empty_addition : Addition_state
+empty_addition =
   Addition Zero
 
-||| Add one permitted Shape. The result stays inside AllowedPolynomial by type.
+||| Add one permitted Shape. The result stays inside Allowed_polynomial by type.
 public export
-addPanel : FactorIndex -> AdditionState -> AdditionState
-addPanel factor state =
+add_panel : Factor_index -> Addition_state -> Addition_state
+add_panel factor state =
   Addition (Add (expression state) (Shape factor))
 
 ||| Rendering is always derived from the typed expression.
 public export
-stack : AdditionState -> Diagram
+stack : Addition_state -> Diagram
 stack state =
   diagram (expression state)
 
 public export
-coefficientInState : Degree -> AdditionState -> Coefficient
-coefficientInState wanted state =
+coefficient_in_state : Degree -> Addition_state -> Coefficient
+coefficient_in_state wanted state =
   allowedCoefficientAt wanted (expression state)
 
 -- -------------------------------------------------------------------------
@@ -130,59 +130,59 @@ coefficientInState wanted state =
 -- -------------------------------------------------------------------------
 
 public export
-data GestureTarget
-  = FactorPanel FactorIndex
-  | AdditionStack
-  | DegreeColumn Degree
+data Gesture_target
+  = Factor_panel Factor_index
+  | Addition_stack
+  | Degree_column Degree
   | Background
 
 public export
-data CommandKind
-  = PresentationOnly
+data Command_kind
+  = Presentation_only
   | Arithmetic
   | Inspection
 
 public export
-data UiCommand : CommandKind -> Type where
-  MovePanelPreview :
-       FactorIndex
-    -> PixelDelta
-    -> UiCommand PresentationOnly
+data Ui_command : Command_kind -> Type where
+  MovePanel_preview :
+       Factor_index
+    -> Pixel_delta
+    -> Ui_command Presentation_only
 
-  AddWholePanel :
-       FactorIndex
-    -> UiCommand Arithmetic
+  Add_whole_panel :
+       Factor_index
+    -> Ui_command Arithmetic
 
-  ResetAddition :
-    UiCommand Arithmetic
+  Reset_addition :
+    Ui_command Arithmetic
 
-  InspectDegree :
+  Inspect_degree :
        Degree
-    -> UiCommand Inspection
+    -> Ui_command Inspection
 
 public export
-applyArithmetic :
-     UiCommand Arithmetic
-  -> AdditionState
-  -> AdditionState
-applyArithmetic (AddWholePanel factor) state =
-  addPanel factor state
-applyArithmetic ResetAddition state =
-  emptyAddition
+apply_arithmetic :
+     Ui_command Arithmetic
+  -> Addition_state
+  -> Addition_state
+apply_arithmetic (Add_whole_panel factor) state =
+  add_panel factor state
+apply_arithmetic Reset_addition state =
+  empty_addition
 
 public export
-data DropDecision
-  = ReturnPanel
-  | CommitPanelAddition FactorIndex
+data Drop_decision
+  = Return_panel
+  | Commit_panel_addition Factor_index
 
 public export
-record InteractionFrame where
-  constructor InteractionInput
-  surface : FramebufferSurface
-  rawEvent : NdkEvent
-  target : GestureTarget
+record Interaction_frame where
+  constructor Interaction_input
+  surface : Framebuffer_surface
+  raw_event : Ndk_event
+  target : Gesture_target
 
 public export
-blogAdditionState : AdditionState
-blogAdditionState =
+blogAddition_state : Addition_state
+blogAddition_state =
   Addition blogFivePanelPolynomial
