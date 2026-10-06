@@ -39,7 +39,7 @@ mock_theta_status (User_truncation coefficients) =
 
 public export
 data Validated_mock_theta : Q_series_spec -> Type where
-  Ramanujan_third_order_fValidated :
+  Ramanujan_third_order_f_validated :
     Validated_mock_theta Ramanujan_third_order_f
 
 public export
@@ -47,7 +47,7 @@ validate_mock_theta :
      (series : Q_series_spec)
   -> Maybe (Validated_mock_theta series)
 validate_mock_theta Ramanujan_third_order_f =
-  Just Ramanujan_third_order_fValidated
+  Just Ramanujan_third_order_f_validated
 validate_mock_theta (Partition_generating_series cutoff) =
   Nothing
 validate_mock_theta (Finite_tetris_polynomial polynomial) =
@@ -79,6 +79,6 @@ finite_prefix_does_not_certify =
 public export
 ramanujan_f_validates :
   validate_mock_theta Ramanujan_third_order_f =
-    Just Ramanujan_third_order_fValidated
+    Just Ramanujan_third_order_f_validated
 ramanujan_f_validates =
   Refl
