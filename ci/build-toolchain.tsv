@@ -1,0 +1,2 @@
+build_id	target	toolchain	ick_revision	ick_status	ick_evidence
+mock-theta-native-apk	armeabi-v7a	ndk	79eccb8ff232e05bdbb9e345fc224f251636b43f	gap:nativeactivity-framebuffer-app-not-qualified-by-ick	android/build-native.sh plus android-NDK direct NativeActivity packager
