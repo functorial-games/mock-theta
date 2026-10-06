@@ -8,19 +8,21 @@ import MockTheta.Validation
 
 main : IO ()
 main = do
-  putStrLn "mock-theta coefficient-diagram type model"
+  putStrLn "mock-theta typed shape-sum model"
   putStrLn
-    ("factor 2 panel: " ++
-      show (coefficientsThrough 3 (factorPanel factor2)))
+    ("factor 2 shape: " ++
+      show (allowedCoefficientsThrough 3 (Shape factor2)))
   putStrLn
-    ("factor 5 panel: " ++
-      show (coefficientsThrough 9 (factorPanel factor5)))
+    ("factor 5 shape: " ++
+      show (allowedCoefficientsThrough 9 (Shape factor5)))
   putStrLn
-    ("blog five-panel Tetris sum: " ++
-      show (coefficientsThrough 9 blogFivePanelTetris))
+    ("blog five-shape Tetris sum: " ++
+      show (allowedCoefficientsThrough 9 blogFivePanelPolynomial))
   putStrLn
-    ("finite Tetris diagram: " ++
-      statusName (mockThetaStatus (FiniteTetrisDiagram blogFivePanelTetris)))
+    ("typed Tetris polynomial: " ++
+      statusName
+        (mockThetaStatus
+          (FiniteTetrisPolynomial blogFivePanelPolynomial)))
   putStrLn
     ("Ramanujan third-order f: " ++
       statusName (mockThetaStatus RamanujanThirdOrderF))
