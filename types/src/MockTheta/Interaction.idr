@@ -8,8 +8,6 @@ import MockTheta.Tetris
 -- NDK-facing vocabulary
 -- -------------------------------------------------------------------------
 
-||| Pixel coordinates belong to the framebuffer/input side only.
-||| They do not carry algebraic meaning.
 public export
 record PixelPoint where
   constructor Pixel
@@ -44,301 +42,166 @@ record PointerSample where
   position : PixelPoint
   eventTimeMillis : Nat
 
-||| Events exposed by the thin Android/NDK adapter.
-||| No constructor here knows what a q-series term is.
 public export
 data NdkEvent
   = Touch PointerSample
-  | FrameTick Nat
   | SurfaceChanged FramebufferSurface
   | AppPaused
   | AppResumed
 
 -- -------------------------------------------------------------------------
--- Gesture vocabulary
+-- What may move on screen
+-- -------------------------------------------------------------------------
+
+||| A whole coloured factor panel may be animated toward the addition stack.
+||| The offset is presentation state only.
+public export
+record PanelPreview (factor : FactorIndex) where
+  constructor Preview
+  offset : PixelDelta
+
+public export
+previewDiagram :
+     {factor : FactorIndex}
+  -> PanelPreview factor
+  -> Diagram
+previewDiagram {factor} preview =
+  factorPanel factor
+
+private
+addDelta : PixelDelta -> PixelDelta -> PixelDelta
+addDelta (Delta x1 y1) (Delta x2 y2) =
+  Delta (x1 + x2) (y1 + y2)
+
+public export
+movePreview :
+     {factor : FactorIndex}
+  -> PixelDelta
+  -> PanelPreview factor
+  -> PanelPreview factor
+movePreview delta preview =
+  Preview (addDelta (offset preview) delta)
+
+||| Moving a panel picture cannot change any q-degree, sign, or provenance.
+public export
+previewMotionPreservesMathematics :
+     {factor : FactorIndex}
+  -> (delta : PixelDelta)
+  -> (preview : PanelPreview factor)
+  -> previewDiagram (movePreview delta preview)
+     =
+     previewDiagram preview
+previewMotionPreservesMathematics delta preview =
+  Refl
+
+-- -------------------------------------------------------------------------
+-- "Tetris" state: a running addition, not a falling-block game
 -- -------------------------------------------------------------------------
 
 public export
-data Gesture
-  = Tap PixelPoint
-  | Drag PixelPoint PixelPoint
-  | Swipe PixelDelta
-  | Release PixelPoint
-  | CancelGesture
+record AdditionState where
+  constructor Addition
+  addedPanels : List FactorIndex
+  stack : Diagram
 
-||| Hit testing decides which UI region owns a gesture.
-||| This is deliberately separate from gesture recognition.
+public export
+emptyAddition : AdditionState
+emptyAddition =
+  Addition [] []
+
+||| This is the semantic Tetris operation:
+||| add one complete coloured polynomial diagram into the shared columns.
+public export
+addPanel : FactorIndex -> AdditionState -> AdditionState
+addPanel factor state =
+  Addition
+    (addedPanels state ++ [factor])
+    (tetrisAdd (stack state) (factorPanel factor))
+
+public export
+coefficientInState : Degree -> AdditionState -> Coefficient
+coefficientInState wanted state =
+  coefficientAt wanted (stack state)
+
+-- -------------------------------------------------------------------------
+-- UI commands
+-- -------------------------------------------------------------------------
+
 public export
 data GestureTarget
-  = ActivePieceBody
-  | PreviousTermControl
-  | NextTermControl
-  | RotateControl
-  | SoftDropControl
-  | HardDropControl
-  | BoardBackground
-  | OutsideBoard
+  = FactorPanel FactorIndex
+  | AdditionStack
+  | DegreeColumn Degree
+  | Background
 
--- -------------------------------------------------------------------------
--- Commands crossing from UI interaction into the Tetris model
--- -------------------------------------------------------------------------
-
-||| The kind index is the important boundary.
-||| SpatialOnly commands are forbidden from changing Term factor.
-||| AlgebraChoice commands may change the selected term.
-||| PieceLifecycle commands may commit/drop the already selected meaning.
 public export
 data CommandKind
-  = SpatialOnly
-  | AlgebraChoice
-  | PieceLifecycle
+  = PresentationOnly
+  | Arithmetic
+  | Inspection
 
+||| No command exists for rotating, colliding, or independently relocating a
+||| Cell. A Cell's degree is mathematical data.
 public export
-data BlockCommand : CommandKind -> Factor -> Type where
-  TranslateBy :
-       {factor : Factor}
+data UiCommand : CommandKind -> Type where
+  MovePanelPreview :
+       FactorIndex
     -> PixelDelta
-    -> BlockCommand SpatialOnly factor
+    -> UiCommand PresentationOnly
 
-  RotateTo :
-       {factor : Factor}
-    -> QuarterTurn
-    -> BlockCommand SpatialOnly factor
+  AddWholePanel :
+       FactorIndex
+    -> UiCommand Arithmetic
 
-  SoftDropRows :
-       {factor : Factor}
-    -> Nat
-    -> BlockCommand SpatialOnly factor
+  ResetAddition :
+    UiCommand Arithmetic
 
-  SelectPrevious :
-       {factor : Factor}
-    -> BlockCommand AlgebraChoice factor
-
-  SelectNext :
-       {factor : Factor}
-    -> BlockCommand AlgebraChoice factor
-
-  SelectExact :
-       {factor : Factor}
-    -> Term factor
-    -> BlockCommand AlgebraChoice factor
-
-  HardDrop :
-       {factor : Factor}
-    -> BlockCommand PieceLifecycle factor
-
-  RequestLock :
-       {factor : Factor}
-    -> BlockCommand PieceLifecycle factor
-
-  CancelPiece :
-       {factor : Factor}
-    -> BlockCommand PieceLifecycle factor
-
-||| Existential command returned by a gesture policy.
-||| The command kind remains visible in the constructor instead of being erased.
-public export
-data InteractionDecision : Factor -> Type where
-  IgnoreGesture :
-    InteractionDecision factor
-
-  SpatialDecision :
-       BlockCommand SpatialOnly factor
-    -> InteractionDecision factor
-
-  AlgebraDecision :
-       BlockCommand AlgebraChoice factor
-    -> InteractionDecision factor
-
-  LifecycleDecision :
-       BlockCommand PieceLifecycle factor
-    -> InteractionDecision factor
-
--- -------------------------------------------------------------------------
--- The algebra boundary
--- -------------------------------------------------------------------------
-
-||| Only an AlgebraChoice command has an operation capable of replacing
-||| Term factor. Previous can fail at the first term.
-public export
-applyAlgebraChoice :
-     {factor : Factor}
-  -> BlockCommand AlgebraChoice factor
-  -> Term factor
-  -> Maybe (Term factor)
-applyAlgebraChoice SelectPrevious current =
-  previousTerm current
-applyAlgebraChoice SelectNext current =
-  Just (nextTerm current)
-applyAlgebraChoice (SelectExact selected) current =
-  Just selected
-
-||| Spatial commands can inspect the current term for drawing, but this
-||| operation has no route for replacing it.
-public export
-termAfterSpatial :
-     {factor : Factor}
-  -> BlockCommand SpatialOnly factor
-  -> FallingPiece factor
-  -> Term factor
-termAfterSpatial command piece =
-  term piece
+  InspectDegree :
+       Degree
+    -> UiCommand Inspection
 
 public export
-spatialPreservesMeaning :
-     {factor : Factor}
-  -> (command : BlockCommand SpatialOnly factor)
-  -> (piece : FallingPiece factor)
-  -> termAfterSpatial command piece = term piece
-spatialPreservesMeaning command piece =
-  Refl
+applyArithmetic :
+     UiCommand Arithmetic
+  -> AdditionState
+  -> AdditionState
+applyArithmetic (AddWholePanel factor) state =
+  addPanel factor state
+applyArithmetic ResetAddition state =
+  emptyAddition
 
-||| Lifecycle commands commit or discard the selected piece; they do not
-||| reinterpret it as a different q-series term before doing so.
+||| Dragging may make the red-arrow "drop" literal as an animation, but release
+||| into the Tetris area means exactly one thing mathematically: addition of
+||| the entire panel.
 public export
-termBeforeLifecycle :
-     {factor : Factor}
-  -> BlockCommand PieceLifecycle factor
-  -> FallingPiece factor
-  -> Term factor
-termBeforeLifecycle command piece =
-  term piece
+data DropDecision
+  = ReturnPanel
+  | CommitPanelAddition FactorIndex
 
 public export
-lifecyclePreservesMeaningUntilCommit :
-     {factor : Factor}
-  -> (command : BlockCommand PieceLifecycle factor)
-  -> (piece : FallingPiece factor)
-  -> termBeforeLifecycle command piece = term piece
-lifecyclePreservesMeaningUntilCommit command piece =
-  Refl
-
--- -------------------------------------------------------------------------
--- Placement is proposed by interaction and judged by the board.
--- -------------------------------------------------------------------------
-
-public export
-record PlacementProposal where
-  constructor ProposedPlacement
-  proposedPosition : ScreenPosition
-  proposedOrientation : QuarterTurn
-
-public export
-data PlacementVerdict
-  = AcceptPlacement
-  | RejectCollision
-  | RejectOutsideBoard
-
-||| The interaction layer proposes geometry.
-||| The board/collision layer remains authoritative about whether it is legal.
-public export
-record SpatialRequest (factor : Factor) where
-  constructor SpatialMove
-  originalTerm : Term factor
-  proposedPlacement : PlacementProposal
-
--- -------------------------------------------------------------------------
--- One input packet passed across the C/Lua <-> typed-model boundary.
--- -------------------------------------------------------------------------
-
-public export
-record InteractionFrame (factor : Factor) where
+record InteractionFrame where
   constructor InteractionInput
   surface : FramebufferSurface
-  piece : FallingPiece factor
   rawEvent : NdkEvent
-  gesture : Maybe Gesture
   target : GestureTarget
 
-||| Rendering returns hit regions separately from the algebraic piece.
-||| That keeps framebuffer rectangles from becoming mathematical blocks.
-public export
-record PixelRect where
-  constructor Rect
-  leftPixel : Int
-  topPixel : Int
-  rightPixel : Int
-  bottomPixel : Int
-
-public export
-record HitRegion where
-  constructor Hit
-  region : PixelRect
-  target : GestureTarget
-
-public export
-record BlockInteractionOverlay where
-  constructor Overlay
-  hitRegions : List HitRegion
-
 -- -------------------------------------------------------------------------
--- Policy examples
---
--- These describe semantics, not a final Android gesture map.
--- C/Lua may choose different recognizers without weakening the type boundary.
+-- Checked reconstruction of the blog's five-panel addition sequence.
 -- -------------------------------------------------------------------------
 
 public export
-pieceDrag :
-     {factor : Factor}
-  -> PixelDelta
-  -> InteractionDecision factor
-pieceDrag delta =
-  SpatialDecision (TranslateBy delta)
+blogAdditionState : AdditionState
+blogAdditionState =
+  addPanel factor1
+    (addPanel factor2
+      (addPanel factor3
+        (addPanel factor4
+          (addPanel factor5 emptyAddition))))
 
 public export
-pieceRotate :
-     {factor : Factor}
-  -> QuarterTurn
-  -> InteractionDecision factor
-pieceRotate turn =
-  SpatialDecision (RotateTo turn)
-
-public export
-choosePrevious :
-     {factor : Factor}
-  -> InteractionDecision factor
-choosePrevious =
-  AlgebraDecision SelectPrevious
-
-public export
-chooseNext :
-     {factor : Factor}
-  -> InteractionDecision factor
-chooseNext =
-  AlgebraDecision SelectNext
-
-public export
-hardDrop :
-     {factor : Factor}
-  -> InteractionDecision factor
-hardDrop =
-  LifecycleDecision HardDrop
-
--- -------------------------------------------------------------------------
--- Checked examples
--- -------------------------------------------------------------------------
-
-public export
-interactionExampleTerm :
-  Term (EulerMinus 3)
-interactionExampleTerm =
-  MinusTerm 2
-
-public export
-interactionNextExample :
-  applyAlgebraChoice SelectNext
-    MockTheta.Interaction.interactionExampleTerm
+blogAdditionCoefficients :
+  coefficientsThrough 9 (stack blogAdditionState)
     =
-  Just (MinusTerm 3)
-interactionNextExample =
-  Refl
-
-public export
-interactionPreviousExample :
-  applyAlgebraChoice SelectPrevious
-    MockTheta.Interaction.interactionExampleTerm
-    =
-  Just (MinusTerm 1)
-interactionPreviousExample =
+  [15, -5, -5, -4, -4, -3, 2, 2, 1, 1]
+blogAdditionCoefficients =
   Refl
