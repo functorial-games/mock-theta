@@ -3,6 +3,6 @@ package mock-theta-types
 version = 0.1.0
 sourcedir = "src"
 
-modules = MockTheta.Tetris, MockTheta.Validation, Main
+modules = MockTheta.Tetris, MockTheta.Interaction, MockTheta.Validation, Main
 main = Main
 executable = mock-theta-types
