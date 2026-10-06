@@ -8,15 +8,19 @@ import MockTheta.Validation
 
 main : IO ()
 main = do
-  putStrLn "mock-theta Idris type model"
-  putStrLn ("partition example degree: " ++ show (choicesDegree partitionExample))
-  putStrLn ("partition example coefficient: " ++ show (choicesCoefficient partitionExample))
-  putStrLn ("mock denominator degree: " ++ show (choicesDegree mockDenominatorExample))
-  putStrLn ("mock denominator coefficient: " ++ show (choicesCoefficient mockDenominatorExample))
-  putStrLn "interaction boundary: spatial commands preserve algebraic term"
+  putStrLn "mock-theta coefficient-diagram type model"
   putStrLn
-    ("random Tetris product: " ++
-      statusName (mockThetaStatus (TetrisProduct (partitionRecipe 4))))
+    ("factor 2 panel: " ++
+      show (coefficientsThrough 3 (factorPanel factor2)))
+  putStrLn
+    ("factor 5 panel: " ++
+      show (coefficientsThrough 9 (factorPanel factor5)))
+  putStrLn
+    ("blog five-panel Tetris sum: " ++
+      show (coefficientsThrough 9 blogFivePanelTetris))
+  putStrLn
+    ("finite Tetris diagram: " ++
+      statusName (mockThetaStatus (FiniteTetrisDiagram blogFivePanelTetris)))
   putStrLn
     ("Ramanujan third-order f: " ++
       statusName (mockThetaStatus RamanujanThirdOrderF))
