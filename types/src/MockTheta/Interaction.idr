@@ -192,11 +192,7 @@ record InteractionFrame where
 public export
 blogAdditionState : AdditionState
 blogAdditionState =
-  addPanel factor1
-    (addPanel factor2
-      (addPanel factor3
-        (addPanel factor4
-          (addPanel factor5 emptyAddition))))
+  Addition blogFivePanelOrder blogFivePanelTetris
 
 public export
 blogAdditionCoefficients :
