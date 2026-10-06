@@ -53,7 +53,7 @@ data NdkEvent
 -- What may move on screen
 -- -------------------------------------------------------------------------
 
-||| A whole coloured factor panel may be animated toward the addition stack.
+||| A whole primitive Shape may be animated toward the addition stack.
 ||| The offset is presentation state only.
 public export
 record PanelPreview (factor : FactorIndex) where
@@ -66,7 +66,7 @@ previewDiagram :
   -> PanelPreview factor
   -> Diagram
 previewDiagram {factor} preview =
-  factorPanel factor
+  diagram (Shape factor)
 
 private
 addDelta : PixelDelta -> PixelDelta -> PixelDelta
@@ -82,7 +82,6 @@ movePreview :
 movePreview delta preview =
   Preview (addDelta (offset preview) delta)
 
-||| Moving a panel picture cannot change any q-degree, sign, or provenance.
 public export
 previewMotionPreservesMathematics :
      {factor : FactorIndex}
@@ -95,33 +94,36 @@ previewMotionPreservesMathematics delta preview =
   Refl
 
 -- -------------------------------------------------------------------------
--- "Tetris" state: a running addition, not a falling-block game
+-- "Tetris" state: the state itself stores an AllowedPolynomial.
+-- No raw cell list is authoritative.
 -- -------------------------------------------------------------------------
 
 public export
 record AdditionState where
   constructor Addition
-  addedPanels : List FactorIndex
-  stack : Diagram
+  expression : AllowedPolynomial
 
 public export
 emptyAddition : AdditionState
 emptyAddition =
-  Addition [] []
+  Addition Zero
 
-||| This is the semantic Tetris operation:
-||| add one complete coloured polynomial diagram into the shared columns.
+||| Add one permitted Shape. The result stays inside AllowedPolynomial by type.
 public export
 addPanel : FactorIndex -> AdditionState -> AdditionState
 addPanel factor state =
-  Addition
-    (addedPanels state ++ [factor])
-    (tetrisAdd (stack state) (factorPanel factor))
+  Addition (Add (expression state) (Shape factor))
+
+||| Rendering is always derived from the typed expression.
+public export
+stack : AdditionState -> Diagram
+stack state =
+  diagram (expression state)
 
 public export
 coefficientInState : Degree -> AdditionState -> Coefficient
 coefficientInState wanted state =
-  coefficientAt wanted (stack state)
+  allowedCoefficientAt wanted (expression state)
 
 -- -------------------------------------------------------------------------
 -- UI commands
@@ -140,8 +142,6 @@ data CommandKind
   | Arithmetic
   | Inspection
 
-||| No command exists for rotating, colliding, or independently relocating a
-||| Cell. A Cell's degree is mathematical data.
 public export
 data UiCommand : CommandKind -> Type where
   MovePanelPreview :
@@ -170,9 +170,6 @@ applyArithmetic (AddWholePanel factor) state =
 applyArithmetic ResetAddition state =
   emptyAddition
 
-||| Dragging may make the red-arrow "drop" literal as an animation, but release
-||| into the Tetris area means exactly one thing mathematically: addition of
-||| the entire panel.
 public export
 data DropDecision
   = ReturnPanel
@@ -185,12 +182,7 @@ record InteractionFrame where
   rawEvent : NdkEvent
   target : GestureTarget
 
--- -------------------------------------------------------------------------
--- Checked reconstruction of the blog's five-panel addition sequence.
--- -------------------------------------------------------------------------
-
 public export
 blogAdditionState : AdditionState
 blogAdditionState =
-  Addition blogFivePanelOrder blogFivePanelTetris
-
+  Addition blogFivePanelPolynomial
