@@ -1,6 +1,7 @@
 module MockTheta.Tetris
 
 %default total
+%auto_implicit off
 
 public export
 Degree : Type
@@ -56,21 +57,29 @@ data Choices : List Factor -> Type where
     Choices []
 
   Choose :
-       Term factor
+       (factor : Factor)
+    -> {rest : List Factor}
+    -> Term factor
     -> Choices rest
     -> Choices (factor :: rest)
 
 public export
-choicesDegree : Choices factors -> Degree
+choicesDegree :
+     {factors : List Factor}
+  -> Choices factors
+  -> Degree
 choicesDegree NoChoices = 0
-choicesDegree (Choose term rest) =
-  termDegree term + choicesDegree rest
+choicesDegree (Choose factor term rest) =
+  termDegree {factor = factor} term + choicesDegree rest
 
 public export
-choicesCoefficient : Choices factors -> Coefficient
+choicesCoefficient :
+     {factors : List Factor}
+  -> Choices factors
+  -> Coefficient
 choicesCoefficient NoChoices = 1
-choicesCoefficient (Choose term rest) =
-  termCoefficient term * choicesCoefficient rest
+choicesCoefficient (Choose factor term rest) =
+  termCoefficient {factor = factor} term * choicesCoefficient rest
 
 public export
 record ProductRecipe where
@@ -167,14 +176,14 @@ record FallingPiece (factor : Factor) where
 public export
 data SomeFallingPiece : Type where
   PackFalling :
-       {factor : Factor}
+       (factor : Factor)
     -> FallingPiece factor
     -> SomeFallingPiece
 
 public export
 data LockedPiece : Type where
   Lock :
-       {factor : Factor}
+       (factor : Factor)
     -> Term factor
     -> Polyomino
     -> ScreenPosition
@@ -183,39 +192,49 @@ data LockedPiece : Type where
 
 public export
 lockedDegree : LockedPiece -> Degree
-lockedDegree (Lock term shape position orientation) =
-  termDegree term
+lockedDegree (Lock factor term shape position orientation) =
+  termDegree {factor = factor} term
 
 public export
 lockedCoefficient : LockedPiece -> Coefficient
-lockedCoefficient (Lock term shape position orientation) =
-  termCoefficient term
+lockedCoefficient (Lock factor term shape position orientation) =
+  termCoefficient {factor = factor} term
 
 public export
 data AlgebraMove : Factor -> Type where
   Select :
-       Term factor
+       {factor : Factor}
+    -> Term factor
     -> AlgebraMove factor
 
   Rotate :
-       QuarterTurn
+       {factor : Factor}
+    -> QuarterTurn
     -> AlgebraMove factor
 
   Drop :
-    AlgebraMove factor
+       {factor : Factor}
+    -> AlgebraMove factor
 
   Commit :
-    AlgebraMove factor
+       {factor : Factor}
+    -> AlgebraMove factor
 
 public export
-nextTerm : {factor : Factor} -> Term factor -> Term factor
+nextTerm :
+     {factor : Factor}
+  -> Term factor
+  -> Term factor
 nextTerm (MinusTerm multiplicity) =
   MinusTerm (S multiplicity)
 nextTerm (PlusSquaredTerm multiplicity) =
   PlusSquaredTerm (S multiplicity)
 
 public export
-previousTerm : {factor : Factor} -> Term factor -> Maybe (Term factor)
+previousTerm :
+     {factor : Factor}
+  -> Term factor
+  -> Maybe (Term factor)
 previousTerm (MinusTerm Z) =
   Nothing
 previousTerm (MinusTerm (S multiplicity)) =
@@ -249,8 +268,8 @@ public export
 partitionExample :
   Choices [EulerMinus 1, EulerMinus 2]
 partitionExample =
-  Choose (MinusTerm 2)
-    (Choose (MinusTerm 1)
+  Choose (EulerMinus 1) (MinusTerm 2)
+    (Choose (EulerMinus 2) (MinusTerm 1)
       NoChoices)
 
 public export
@@ -265,8 +284,8 @@ public export
 mockDenominatorExample :
   Choices [EulerPlusSquared 1, EulerPlusSquared 2]
 mockDenominatorExample =
-  Choose (PlusSquaredTerm 1)
-    (Choose (PlusSquaredTerm 2)
+  Choose (EulerPlusSquared 1) (PlusSquaredTerm 1)
+    (Choose (EulerPlusSquared 2) (PlusSquaredTerm 2)
       NoChoices)
 
 public export
