@@ -10,292 +10,267 @@ public export
 Coefficient : Type
 Coefficient = Integer
 
+||| One visible square contributes exactly +1 or -1 to one coefficient column.
 public export
-data Factor
-  = EulerMinus Nat
-  | EulerPlusSquared Nat
-
-public export
-data Term : Factor -> Type where
-  MinusTerm :
-       {step : Nat}
-    -> (multiplicity : Nat)
-    -> Term (EulerMinus step)
-
-  PlusSquaredTerm :
-       {step : Nat}
-    -> (multiplicity : Nat)
-    -> Term (EulerPlusSquared step)
-
-private
-isEven : Nat -> Bool
-isEven Z = True
-isEven (S Z) = False
-isEven (S (S n)) = isEven n
+data Sign
+  = Plus
+  | Minus
 
 public export
-termDegree : {factor : Factor} -> Term factor -> Degree
-termDegree {factor = EulerMinus step} (MinusTerm multiplicity) =
-  multiplicity * step
-termDegree {factor = EulerPlusSquared step} (PlusSquaredTerm multiplicity) =
-  multiplicity * step
+signValue : Sign -> Coefficient
+signValue Plus = 1
+signValue Minus = -1
 
 public export
-termCoefficient : {factor : Factor} -> Term factor -> Coefficient
-termCoefficient (MinusTerm multiplicity) =
-  1
-termCoefficient (PlusSquaredTerm multiplicity) =
-  let magnitude : Integer = cast (S multiplicity)
-   in if isEven multiplicity
-         then magnitude
-         else negate magnitude
+flipSign : Sign -> Sign
+flipSign Plus = Minus
+flipSign Minus = Plus
+
+||| Factor stores n-1, so every FactorIndex denotes a genuine positive n.
+||| Factor 0 means (1 - q), Factor 1 means (1 - q^2), and so on.
+public export
+data FactorIndex
+  = Factor Nat
 
 public export
-data Choices : List Factor -> Type where
-  NoChoices :
-    Choices []
-
-  Choose :
-       (factor : Factor)
-    -> {rest : List Factor}
-    -> Term factor
-    -> Choices rest
-    -> Choices (factor :: rest)
+factorDegree : FactorIndex -> Degree
+factorDegree (Factor zeroBased) = S zeroBased
 
 public export
-choicesDegree :
-     {factors : List Factor}
-  -> Choices factors
-  -> Degree
-choicesDegree NoChoices = 0
-choicesDegree (Choose factor term rest) =
-  termDegree {factor = factor} term + choicesDegree rest
+factor1 : FactorIndex
+factor1 = Factor 0
 
 public export
-choicesCoefficient :
-     {factors : List Factor}
-  -> Choices factors
-  -> Coefficient
-choicesCoefficient NoChoices = 1
-choicesCoefficient (Choose factor term rest) =
-  termCoefficient {factor = factor} term * choicesCoefficient rest
+factor2 : FactorIndex
+factor2 = Factor 1
 
 public export
-record ProductRecipe where
-  constructor Recipe
-  name : String
-  baseDegree : Degree
-  baseCoefficient : Coefficient
-  factors : List Factor
+factor3 : FactorIndex
+factor3 = Factor 2
 
 public export
-record CompletedPath (recipe : ProductRecipe) where
-  constructor Complete
-  choices : Choices (factors recipe)
+factor4 : FactorIndex
+factor4 = Factor 3
 
 public export
-completedDegree :
-     (recipe : ProductRecipe)
-  -> CompletedPath recipe
-  -> Degree
-completedDegree recipe path =
-  baseDegree recipe + choicesDegree (choices path)
+factor5 : FactorIndex
+factor5 = Factor 4
 
-public export
-completedCoefficient :
-     (recipe : ProductRecipe)
-  -> CompletedPath recipe
-  -> Coefficient
-completedCoefficient recipe path =
-  baseCoefficient recipe * choicesCoefficient (choices path)
-
-private
-oneTo : Nat -> List Nat
-oneTo Z = []
-oneTo (S n) = oneTo n ++ [S n]
-
-public export
-partitionRecipe : (maxPart : Nat) -> ProductRecipe
-partitionRecipe maxPart =
-  Recipe
-    "partition generating function"
-    0
-    1
-    (map EulerMinus (oneTo maxPart))
-
-||| One factorized summand used inside Ramanujan's third-order f(q).
+||| In the blog drawings the input to the n-th coloured panel is
 |||
-||| This is deliberately *not* called a mock-theta recipe: one summand is not
-||| itself a mock theta function. Mock-theta certification lives in
-||| MockTheta.Validation and applies to a whole q-series.
+|||   1 + (1-q) + (1-q^2) + ... + (1-q^(n-1)).
+|||
+||| We preserve which summand produced each unit square.
 public export
-thirdOrderFSummandRecipe : (n : Nat) -> ProductRecipe
-thirdOrderFSummandRecipe n =
-  Recipe
-    "Ramanujan third-order f summand"
-    (n * n)
-    1
-    (map EulerPlusSquared (oneTo n))
+data SeedOrigin
+  = LeadingOne
+  | PreviousEulerFactor Degree
 
+||| Multiplication by (1-q^n) makes two copies:
+|||
+|||   P(q)          and          -q^n P(q).
 public export
-record Offset where
-  constructor XY
-  x : Int
-  y : Int
+data MultiplicationBranch
+  = Unshifted
+  | ShiftedNegated
 
 public export
-data QuarterTurn
-  = Turn0
-  | Turn90
-  | Turn180
-  | Turn270
+record SeedCell where
+  constructor Seed
+  seedDegree : Degree
+  seedSign : Sign
+  seedOrigin : SeedOrigin
+
+||| A Cell is the mathematical "block" in the post.
+|||
+||| It has no rotation, velocity, collision box, tetromino identity, or
+||| independent horizontal position. Its horizontal column IS its q-degree.
+public export
+record Cell where
+  constructor SignedCell
+  degree : Degree
+  sign : Sign
+  panelFactor : FactorIndex
+  seedOrigin : SeedOrigin
+  branch : MultiplicationBranch
 
 public export
-record Polyomino where
-  constructor Shape
-  cells : List Offset
+Diagram : Type
+Diagram = List Cell
+
+private
+previousSeedCells : (remaining : Nat) -> (nextDegree : Degree) -> List SeedCell
+previousSeedCells Z nextDegree =
+  []
+previousSeedCells (S remaining) nextDegree =
+  Seed 0 Plus (PreviousEulerFactor nextDegree) ::
+  Seed nextDegree Minus (PreviousEulerFactor nextDegree) ::
+  previousSeedCells remaining (S nextDegree)
+
+||| Unit-square expansion of
+|||
+|||   1 + sum_{j=1}^{n-1} (1-q^j).
+public export
+panelSeed : FactorIndex -> List SeedCell
+panelSeed (Factor zeroBased) =
+  Seed 0 Plus LeadingOne ::
+  previousSeedCells zeroBased 1
+
+private
+expandSeedCell : FactorIndex -> SeedCell -> Diagram
+expandSeedCell factor seed =
+  [ SignedCell
+      (seedDegree seed)
+      (seedSign seed)
+      factor
+      (seedOrigin seed)
+      Unshifted
+  , SignedCell
+      (seedDegree seed + factorDegree factor)
+      (flipSign (seedSign seed))
+      factor
+      (seedOrigin seed)
+      ShiftedNegated
+  ]
+
+private
+expandAll : FactorIndex -> List SeedCell -> Diagram
+expandAll factor [] =
+  []
+expandAll factor (seed :: rest) =
+  expandSeedCell factor seed ++ expandAll factor rest
+
+||| The exact coloured panel headed "1 - q^n times..." in the blog.
+|||
+||| Algebraically this is
+|||
+|||   (1-q^n) * [1 + (1-q) + ... + (1-q^(n-1))].
+|||
+||| The result remains expanded into signed unit cells instead of prematurely
+||| collapsing equal degrees into one coefficient.
+public export
+factorPanel : FactorIndex -> Diagram
+factorPanel factor =
+  expandAll factor (panelSeed factor)
+
+||| "Tetris" in the post means addition.
+|||
+||| Adding two pictures means putting their signed cells into the same degree
+||| columns. We deliberately DO NOT delete opposite signs: the coloured
+||| provenance stays visible, and the coefficient is read by summing signs.
+public export
+tetrisAdd : Diagram -> Diagram -> Diagram
+tetrisAdd left right =
+  left ++ right
 
 public export
-data PieceMeaning
-  = PartBlocks
-  | MultiplicityBlocks
-  | SignedCoefficientBlock
-  | MonomialBlock
+tetrisPanels : List FactorIndex -> Diagram
+tetrisPanels [] =
+  []
+tetrisPanels (factor :: rest) =
+  tetrisAdd (factorPanel factor) (tetrisPanels rest)
 
 public export
-record ScreenPosition where
-  constructor At
-  x : Int
-  y : Int
+coefficientAt : Degree -> Diagram -> Coefficient
+coefficientAt wanted [] =
+  0
+coefficientAt wanted (cell :: rest) =
+  let contribution =
+        if degree cell == wanted
+           then signValue (sign cell)
+           else 0
+   in contribution + coefficientAt wanted rest
 
 public export
-record FallingPiece (factor : Factor) where
-  constructor Falling
-  term : Term factor
-  shape : Polyomino
-  meaning : PieceMeaning
-  position : ScreenPosition
-  orientation : QuarterTurn
+columnCells : Degree -> Diagram -> List Cell
+columnCells wanted [] =
+  []
+columnCells wanted (cell :: rest) =
+  if degree cell == wanted
+     then cell :: columnCells wanted rest
+     else columnCells wanted rest
+
+private
+coefficientsFrom :
+     (nextDegree : Degree)
+  -> (count : Nat)
+  -> Diagram
+  -> List Coefficient
+coefficientsFrom nextDegree Z diagram =
+  []
+coefficientsFrom nextDegree (S count) diagram =
+  coefficientAt nextDegree diagram ::
+  coefficientsFrom (S nextDegree) count diagram
 
 public export
-data SomeFallingPiece : Type where
-  PackFalling :
-       (factor : Factor)
-    -> FallingPiece factor
-    -> SomeFallingPiece
+coefficientsThrough : Degree -> Diagram -> List Coefficient
+coefficientsThrough lastDegree diagram =
+  coefficientsFrom 0 (S lastDegree) diagram
+
+||| The blog lays the five coloured panels out in this order before the red
+||| "Tetris" arrows: n=5,4,3,2,1.
+public export
+blogFivePanelOrder : List FactorIndex
+blogFivePanelOrder =
+  [factor5, factor4, factor3, factor2, factor1]
 
 public export
-data LockedPiece : Type where
-  Lock :
-       (factor : Factor)
-    -> Term factor
-    -> Polyomino
-    -> ScreenPosition
-    -> QuarterTurn
-    -> LockedPiece
+blogFivePanelTetris : Diagram
+blogFivePanelTetris =
+  tetrisPanels blogFivePanelOrder
+
+-- -------------------------------------------------------------------------
+-- Checked arithmetic from the supplied screenshots.
+-- -------------------------------------------------------------------------
 
 public export
-lockedDegree : LockedPiece -> Degree
-lockedDegree (Lock factor term shape position orientation) =
-  termDegree {factor = factor} term
+factor1Coefficients :
+  coefficientsThrough 1 (factorPanel factor1)
+    =
+  [1, -1]
+factor1Coefficients =
+  Refl
 
 public export
-lockedCoefficient : LockedPiece -> Coefficient
-lockedCoefficient (Lock factor term shape position orientation) =
-  termCoefficient {factor = factor} term
+factor2Coefficients :
+  coefficientsThrough 3 (factorPanel factor2)
+    =
+  [2, -1, -2, 1]
+factor2Coefficients =
+  Refl
 
 public export
-data AlgebraMove : Factor -> Type where
-  Select :
-       {factor : Factor}
-    -> Term factor
-    -> AlgebraMove factor
-
-  Rotate :
-       {factor : Factor}
-    -> QuarterTurn
-    -> AlgebraMove factor
-
-  Drop :
-       {factor : Factor}
-    -> AlgebraMove factor
-
-  Commit :
-       {factor : Factor}
-    -> AlgebraMove factor
+factor3Coefficients :
+  coefficientsThrough 5 (factorPanel factor3)
+    =
+  [3, -1, -1, -3, 1, 1]
+factor3Coefficients =
+  Refl
 
 public export
-nextTerm :
-     {factor : Factor}
-  -> Term factor
-  -> Term factor
-nextTerm (MinusTerm multiplicity) =
-  MinusTerm (S multiplicity)
-nextTerm (PlusSquaredTerm multiplicity) =
-  PlusSquaredTerm (S multiplicity)
+factor4Coefficients :
+  coefficientsThrough 7 (factorPanel factor4)
+    =
+  [4, -1, -1, -1, -4, 1, 1, 1]
+factor4Coefficients =
+  Refl
 
 public export
-previousTerm :
-     {factor : Factor}
-  -> Term factor
-  -> Maybe (Term factor)
-previousTerm (MinusTerm Z) =
-  Nothing
-previousTerm (MinusTerm (S multiplicity)) =
-  Just (MinusTerm multiplicity)
-previousTerm (PlusSquaredTerm Z) =
-  Nothing
-previousTerm (PlusSquaredTerm (S multiplicity)) =
-  Just (PlusSquaredTerm multiplicity)
+factor5Coefficients :
+  coefficientsThrough 9 (factorPanel factor5)
+    =
+  [5, -1, -1, -1, -1, -5, 1, 1, 1, 1]
+factor5Coefficients =
+  Refl
 
+||| This is the coefficient row underneath the final stacked picture:
+|||
+|||   15 -5q -5q^2 -4q^3 -4q^4 -3q^5
+|||      +2q^6 +2q^7 +q^8 +q^9.
 public export
-record TetrisState where
-  constructor State
-  recipe : ProductRecipe
-  nextFactor : Nat
-  active : Maybe SomeFallingPiece
-  locked : List LockedPiece
-
-public export
-lockedDegreeTotal : List LockedPiece -> Degree
-lockedDegreeTotal [] = 0
-lockedDegreeTotal (piece :: rest) =
-  lockedDegree piece + lockedDegreeTotal rest
-
-public export
-lockedCoefficientTotal : List LockedPiece -> Coefficient
-lockedCoefficientTotal [] = 1
-lockedCoefficientTotal (piece :: rest) =
-  lockedCoefficient piece * lockedCoefficientTotal rest
-
-public export
-partitionExample :
-  Choices [EulerMinus 1, EulerMinus 2]
-partitionExample =
-  Choose (EulerMinus 1) (MinusTerm 2)
-    (Choose (EulerMinus 2) (MinusTerm 1)
-      NoChoices)
-
-public export
-partitionExampleDegree : choicesDegree MockTheta.Tetris.partitionExample = 4
-partitionExampleDegree = Refl
-
-public export
-partitionExampleCoefficient : choicesCoefficient MockTheta.Tetris.partitionExample = 1
-partitionExampleCoefficient = Refl
-
-public export
-mockDenominatorExample :
-  Choices [EulerPlusSquared 1, EulerPlusSquared 2]
-mockDenominatorExample =
-  Choose (EulerPlusSquared 1) (PlusSquaredTerm 1)
-    (Choose (EulerPlusSquared 2) (PlusSquaredTerm 2)
-      NoChoices)
-
-public export
-mockDenominatorDegree : choicesDegree MockTheta.Tetris.mockDenominatorExample = 5
-mockDenominatorDegree = Refl
-
-public export
-mockDenominatorCoefficient : choicesCoefficient MockTheta.Tetris.mockDenominatorExample = -6
-mockDenominatorCoefficient = Refl
+blogFivePanelCoefficients :
+  coefficientsThrough 9 blogFivePanelTetris
+    =
+  [15, -5, -5, -4, -4, -3, 2, 2, 1, 1]
+blogFivePanelCoefficients =
+  Refl
