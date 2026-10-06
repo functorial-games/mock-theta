@@ -123,9 +123,14 @@ partitionRecipe maxPart =
     1
     (map EulerMinus (oneTo maxPart))
 
+||| One factorized summand used inside Ramanujan's third-order f(q).
+|||
+||| This is deliberately *not* called a mock-theta recipe: one summand is not
+||| itself a mock theta function. Mock-theta certification lives in
+||| MockTheta.Validation and applies to a whole q-series.
 public export
-mockFSummandRecipe : (n : Nat) -> ProductRecipe
-mockFSummandRecipe n =
+thirdOrderFSummandRecipe : (n : Nat) -> ProductRecipe
+thirdOrderFSummandRecipe n =
   Recipe
     "Ramanujan third-order f summand"
     (n * n)
