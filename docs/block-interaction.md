@@ -1,144 +1,58 @@
-# Block interaction between the NDK framebuffer and algebraic Tetris
+# Interaction between the NDK framebuffer and Tetris-as-addition
 
-The interaction layer should not let framebuffer gestures acquire mathematical meaning by accident.
+The interaction layer follows the blog construction literally.
 
-The intended stack is:
+A **cell** is fixed mathematical data: one signed unit at one \(q\)-degree. Individual cells are not game pieces.
 
-    Android NDK touch / frame events
-        ↓
-    gesture recognition + hit testing
-        ↓
-    typed block command
-        ↓
-    Tetris piece / algebraic term
-        ↓
-    board collision + coefficient bookkeeping
-        ↓
-    framebuffer drawing
+A **panel** is a complete coloured polynomial diagram such as the orange \(A_4(q)\) or blue \(A_5(q)\) panel in the screenshots.
 
-`types/src/MockTheta/Interaction.idr` sketches that boundary.
+## What can move
 
-## What touching a block should do
+Only presentation objects move.
 
-### Grab and drag
+The renderer may animate an entire panel downward toward the common coefficient columns. That motion is a pixel offset attached to a `PanelPreview`.
 
-Touching the active block grabs it.
+The typed invariant is that moving a preview changes only its pixel offset; the `previewDiagram` before and after is identical. Animation therefore cannot alter degree, sign, or provenance.
 
-Dragging changes only its proposed screen position. Horizontal drag is the main steering action. Downward drag can accelerate descent.
+## What dropping means
 
-Dragging must **not** change which term of the factor the block represents.
+A downward animation can visually resemble dropping blocks because that is how the red Tetris arrows are drawn.
 
-A piece representing \(q^{6}\) before a drag still represents \(q^{6}\) afterward.
+But the semantic event at the end is simply `AddWholePanel factor`, meaning current stack plus `factorPanel factor`. No collision solver is involved.
 
-The type sketch encodes this as a `SpatialOnly` command and proves that the selected `Term factor` survives such a command unchanged.
+If a drag is cancelled or released outside the addition area, no arithmetic occurs.
 
-### Tap
+## Framebuffer geometry
 
-A short tap on the active piece should rotate it by one quarter-turn.
+The framebuffer derives geometry from mathematics:
 
-Rotation changes geometry only. It must not change degree, coefficient, factor identity or selected multiplicity.
+- cell degree -> horizontal coefficient column
+- cell order in a column -> vertical stack position
+- cell sign -> + or - glyph
+- panel factor -> colour family
+- provenance -> optional shade/detail
 
-### Release
+Pixels never determine degree. Degree determines pixels.
 
-Ordinary release should stop direct manipulation and return the piece to falling under the game clock.
+## Useful touch targets
 
-Release should not by itself mean “commit this coefficient”. That would make small touch errors mathematically consequential.
+The first useful interaction vocabulary is small:
 
-### Downward flick
+- a coloured factor panel
+- the shared addition/Tetris area
+- a degree column for inspection
+- background
 
-A deliberate fast downward flick can be the hard-drop gesture.
+Possible interactions are whole-panel drag/addition, provenance highlighting, degree-column inspection, and reset. The exact gesture mapping can change without changing the mathematics.
 
-Hard drop moves the already-selected term to its final legal position and then requests locking. It still does not reinterpret the term.
+## Things intentionally absent
 
-### Collision
+The type sketch has no tetrominoes, rotating cells, gravity, line clearing, collision, hard drop, soft drop, or independent horizontal relocation of a cell.
 
-The gesture layer proposes a placement. The board decides whether that placement is legal.
+Those concepts came from the mistaken interpretation of the word Tetris and do not belong in this construction.
 
-This prevents touch code from becoming authoritative about board geometry. The interaction layer produces a `PlacementProposal`; collision code returns an accept/reject verdict.
+## NDK boundary
 
-## Changing the algebra
+`MockTheta.Interaction` still gives Android ordinary framebuffer and pointer types. Presentation, arithmetic, and inspection commands are indexed separately so screen motion cannot accidentally alter the polynomial.
 
-Changing the selected term is a different interaction class.
-
-For a factor
-
-\[
-\frac{1}{1-q^m},
-\]
-
-the user may need to move among
-
-\[
-1,\ q^m,\ q^{2m},\ q^{3m},\ldots
-\]
-
-For
-
-\[
-\frac{1}{(1+q^m)^2},
-\]
-
-the same step changes both degree and signed coefficient.
-
-I would give this an explicit previous/next control adjacent to the active piece or its formula row rather than overload dragging.
-
-So:
-
-- previous term = algebra command;
-- next term = algebra command;
-- dragging = spatial command;
-- rotation = spatial command;
-- hard drop / lock = lifecycle command.
-
-That separation is more important than the exact gesture chosen later.
-
-## Why not use horizontal swipe to change the term?
-
-Because horizontal motion already has an obvious spatial meaning in Tetris.
-
-If the same movement sometimes means “move the piece one column” and sometimes means “replace \(q^{km}\) with \(q^{(k+1)m}\)”, the UI can silently change the mathematics while the user thinks they are only positioning a block.
-
-The type sketch makes those two effects inhabit different command types.
-
-## Hit regions
-
-Framebuffer drawing and hit testing should also remain separate.
-
-The renderer can return ordinary pixel rectangles tagged as:
-
-- active piece body;
-- previous-term control;
-- next-term control;
-- rotate control;
-- soft-drop control;
-- hard-drop control;
-- board background.
-
-Those are `GestureTarget`s, not mathematical objects.
-
-A visible rectangle only becomes mathematically meaningful after the corresponding typed command reaches the Tetris model.
-
-## No ordinary line-clearing semantics
-
-I would not make line clearing part of the mathematical core.
-
-Destroying locked pieces would destroy the visible provenance of coefficient contributions. If a line-clear animation is ever useful, it should be a display transformation over already-recorded ledger entries, not deletion of the algebraic history.
-
-The coefficient ledger remains authoritative even if the screen later compresses or animates old blocks.
-
-## Proposed first control scheme
-
-For the first APK:
-
-- touch + drag active piece: move;
-- tap active piece: rotate \(90^\circ\);
-- hold/drag downward: soft drop;
-- fast downward flick: hard drop and request lock;
-- previous/next buttons beside the formula/active piece: change the selected term;
-- release after ordinary drag: resume falling;
-- collision: board-owned and fail-closed;
-- algebraic selection: explicit and visibly reflected in degree/coefficient labels.
-
-The important invariant is:
-
-> positioning a block cannot change its \(q\)-series meaning, and changing its \(q\)-series meaning cannot happen as a side effect of positioning it.
+The C framebuffer should be a renderer for these typed coefficient diagrams, not a Tetris game engine.
