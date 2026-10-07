@@ -18,7 +18,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Select tested Idris2 package collection
         run: pack switch nightly-260814

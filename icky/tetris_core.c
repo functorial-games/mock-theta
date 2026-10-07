@@ -8,6 +8,110 @@ static int maximum_int(int left, int right) {
     return left > right ? left : right;
 }
 
+int mock_theta_layout(int width, int height, struct mock_theta_layout *layout) {
+    if (layout == 0 || width < 11 || height < 31) {
+        return 0;
+    }
+    layout->cell = minimum_int(width / 11, height / 31);
+    layout->board_left = (width - 10 * layout->cell) / 2;
+    layout->source_top = 3 * layout->cell;
+    layout->stack_bottom = height - 3 * layout->cell;
+    /* Reserve space for all 15 signed cells in degree zero. The preview
+     * stops in the target band and never covers the accumulated diagram. */
+    layout->target_top = layout->source_top + 6 * layout->cell;
+    layout->target_bottom = layout->stack_bottom - 16 * layout->cell;
+    layout->reset_left = width - 6 * layout->cell;
+    layout->reset_top = height - layout->cell;
+    return 1;
+}
+
+void mock_theta_cancel(struct mock_theta_game *game) {
+    if (game == 0) {
+        return;
+    }
+    game->active_pointer = -1;
+    game->drag_start_y = 0;
+    game->preview_offset_y = 0;
+    game->reset_armed = 0;
+}
+
+void mock_theta_reset(struct mock_theta_game *game) {
+    if (game != 0) {
+        game->added_count = 0;
+        mock_theta_cancel(game);
+    }
+}
+
+static int reset_hit(const struct mock_theta_layout *layout,
+                     int width, int height, int x, int y) {
+    return x >= layout->reset_left && x < width &&
+           y >= layout->reset_top && y < height;
+}
+
+int mock_theta_pointer(struct mock_theta_game *game,
+                      int width, int height,
+                      enum mock_theta_pointer_phase phase,
+                      int pointer, int x, int y) {
+    struct mock_theta_layout layout;
+    int factor;
+    if (game == 0 || !mock_theta_layout(width, height, &layout)) {
+        return 0;
+    }
+    if (phase == MOCK_THETA_POINTER_CANCEL) {
+        mock_theta_cancel(game);
+        return 1;
+    }
+    factor = mock_theta_blog_factor(game->added_count);
+    if (phase == MOCK_THETA_POINTER_DOWN) {
+        if (game->active_pointer >= 0 || pointer < 0) {
+            return 0;
+        }
+        if (reset_hit(&layout, width, height, x, y)) {
+            game->active_pointer = pointer;
+            game->reset_armed = 1;
+            return 1;
+        }
+        if (factor == 0 || x < layout.board_left ||
+            x >= layout.board_left + 2 * factor * layout.cell ||
+            y < layout.source_top ||
+            y >= layout.source_top + factor * layout.cell) {
+            return 0;
+        }
+        game->active_pointer = pointer;
+        game->drag_start_y = y;
+        return 1;
+    }
+    if (pointer != game->active_pointer || pointer < 0) {
+        return 0;
+    }
+    if (phase == MOCK_THETA_POINTER_MOVE) {
+        if (!game->reset_armed) {
+            int maximum_offset = layout.target_bottom -
+                (layout.source_top + factor * layout.cell);
+            game->preview_offset_y = maximum_int(0, minimum_int(
+                y - game->drag_start_y, maximum_offset));
+        }
+        return 1;
+    }
+    if (phase == MOCK_THETA_POINTER_UP) {
+        int reset = game->reset_armed &&
+            reset_hit(&layout, width, height, x, y);
+        int add = !game->reset_armed && factor != 0 &&
+            x >= layout.board_left &&
+            x < layout.board_left + 10 * layout.cell &&
+            y >= layout.target_top && y < layout.target_bottom;
+        /* Clear capture before changing arithmetic: repeated UP is inert. */
+        mock_theta_cancel(game);
+        if (reset) {
+            mock_theta_reset(game);
+        } else if (add) {
+            game->added_count += 1;
+        }
+        return 1;
+    }
+    return 0;
+}
+
 static unsigned int rgba(
     unsigned int red,
     unsigned int green,
@@ -472,7 +576,7 @@ static void draw_arrow_down(
     );
 
     for (int step = 0; step < head; ++step) {
-        int half = step;
+        int half = head - step - 1;
 
         fill_rect(
             pixels,
@@ -605,6 +709,38 @@ static void draw_integer_centered(
     );
 }
 
+static const unsigned char letter_rows[26][5] = {
+    {2,5,7,5,5}, {6,5,6,5,6}, {3,4,4,4,3}, {6,5,5,5,6},
+    {7,4,6,4,7}, {7,4,6,4,4}, {3,4,5,5,3}, {5,5,7,5,5},
+    {7,2,2,2,7}, {1,1,1,5,2}, {5,5,6,5,5}, {4,4,4,4,7},
+    {5,7,7,5,5}, {5,7,7,7,5}, {2,5,5,5,2}, {6,5,6,4,4},
+    {2,5,5,3,1}, {6,5,6,5,5}, {3,4,2,1,6}, {7,2,2,2,2},
+    {5,5,5,5,7}, {5,5,5,5,2}, {5,5,7,7,5}, {5,5,2,5,5},
+    {5,5,2,2,2}, {7,1,2,4,7}
+};
+
+static void draw_text(unsigned int *pixels, int width, int height, int stride,
+                      int x, int y, int scale, const char *text,
+                      unsigned int color) {
+    for (int index = 0; text[index] != 0; ++index) {
+        int letter = text[index] - 'A';
+        if (letter >= 0 && letter < 26) {
+            for (int row = 0; row < 5; ++row) {
+                for (int column = 0; column < 3; ++column) {
+                    if ((letter_rows[letter][row] &
+                         (1u << (2 - column))) != 0u) {
+                        fill_rect(pixels, width, height, stride,
+                            x + column * scale, y + row * scale,
+                            x + (column + 1) * scale, y + (row + 1) * scale,
+                            color);
+                    }
+                }
+            }
+        }
+        x += 4 * scale;
+    }
+}
+
 void mock_theta_render_rgba(
     unsigned int *pixels,
     int width,
@@ -619,16 +755,19 @@ void mock_theta_render_rgba(
     int source_top;
     int stack_bottom;
     int source_factor;
+    struct mock_theta_layout layout;
 
     unsigned int background = rgba(8u, 10u, 14u);
     unsigned int guide = rgba(57u, 63u, 74u);
     unsigned int coefficient_color =
         rgba(231u, 235u, 242u);
+    unsigned int degree_color = rgba(155u, 169u, 186u);
 
     if (pixels == 0 ||
         width <= 0 ||
         height <= 0 ||
-        stride < width) {
+        stride < width ||
+        !mock_theta_layout(width, height, &layout)) {
         return;
     }
 
@@ -652,20 +791,47 @@ void mock_theta_render_rgba(
         background
     );
 
-    cell = minimum_int(width / 12, height / 34);
-    cell = maximum_int(14, cell);
+    cell = layout.cell;
+    board_left = layout.board_left;
+    stack_bottom = layout.stack_bottom;
+    source_factor = mock_theta_blog_factor(added_count);
+    preview_offset_y = maximum_int(0, minimum_int(preview_offset_y,
+        layout.target_bottom - (layout.source_top + source_factor * cell)));
+    source_top = layout.source_top + preview_offset_y;
 
-    board_left =
-        (width -
-         (MOCK_THETA_MAX_DEGREE + 1) * cell) / 2;
+    {
+        int scale = maximum_int(1, cell / 8);
+        draw_text(pixels, width, height, stride, cell / 2, cell / 3,
+                  scale, "COEFFICIENT ADDITION", coefficient_color);
+        draw_text(pixels, width, height, stride, cell / 2, cell,
+                  scale, source_factor ? "DRAG NEXT PANEL" : "FIVE PANELS ADDED",
+                  coefficient_color);
+        draw_integer_centered(pixels, width, height, stride,
+                              width - cell, cell, scale, added_count,
+                              coefficient_color);
+        draw_text(pixels, width, height, stride, cell / 2, height - cell / 2,
+                  maximum_int(1, cell / 12), "ADDITION ONLY", coefficient_color);
+        fill_rect(pixels, width, height, stride,
+                  layout.reset_left, layout.reset_top, width, height, guide);
+        draw_text(pixels, width, height, stride,
+                  layout.reset_left + cell / 2, layout.reset_top + cell / 4,
+                  scale, "RESET", coefficient_color);
+    }
 
-    source_top =
-        maximum_int(28, height / 18) +
-        preview_offset_y;
-
-    stack_bottom =
-        height -
-        maximum_int(72, height / 13);
+    if (source_factor != 0) {
+        fill_rect(pixels, width, height, stride,
+                  board_left, layout.target_top,
+                  board_left + 10 * cell, layout.target_bottom,
+                  rgba(22u, 52u, 40u));
+        draw_text(pixels, width, height, stride,
+                  board_left + cell / 2, layout.target_top + cell / 3,
+                  maximum_int(1, cell / 8), "RELEASE HERE TO ADD", coefficient_color);
+        /* One bounding panel, with no independently movable cell state. */
+        fill_rect(pixels, width, height, stride,
+                  board_left - 2, source_top - 2,
+                  board_left + 2 * source_factor * cell + 2,
+                  source_top + source_factor * cell + 2, guide);
+    }
 
     for (int degree = 0;
          degree <= MOCK_THETA_MAX_DEGREE;
@@ -683,6 +849,14 @@ void mock_theta_render_rgba(
             stack_bottom + 2,
             guide
         );
+        /* Guides give every signed square a fixed degree column. */
+        fill_rect(pixels, width, height, stride, x,
+                  stack_bottom - 15 * cell, x + 1, stack_bottom, guide);
+        if (source_factor != 0) {
+            draw_integer_centered(pixels, width, height, stride,
+                                  x + cell / 2, layout.source_top - cell / 2,
+                                  maximum_int(1, cell / 12), degree, degree_color);
+        }
     }
 
     draw_added_stack(
@@ -695,9 +869,6 @@ void mock_theta_render_rgba(
         stack_bottom,
         cell
     );
-
-    source_factor =
-        mock_theta_blog_factor(added_count);
 
     if (source_factor != 0) {
         draw_shape(
@@ -712,15 +883,8 @@ void mock_theta_render_rgba(
         );
 
         if (preview_offset_y == 0) {
-            int arrow_top =
-                source_top +
-                (source_factor + 1) * cell;
-
-            int arrow_bottom =
-                maximum_int(
-                    arrow_top + cell,
-                    height / 2
-                );
+            int arrow_top = source_top + source_factor * cell + cell / 4;
+            int arrow_bottom = layout.target_top - cell / 4;
 
             draw_arrow_down(
                 pixels,
@@ -741,8 +905,7 @@ void mock_theta_render_rgba(
     );
 
     {
-        int scale =
-            maximum_int(1, cell / 12);
+        int scale = maximum_int(1, cell / 8);
 
         int y =
             stack_bottom +
@@ -764,6 +927,15 @@ void mock_theta_render_rgba(
                 coefficients[degree],
                 coefficient_color
             );
+            draw_integer_centered(pixels, width, height, stride,
+                                  board_left + degree * cell + cell / 2,
+                                  stack_bottom + cell,
+                                  maximum_int(1, cell / 12), degree, degree_color);
         }
+        draw_text(pixels, width, height, stride, 2,
+                  stack_bottom + maximum_int(12, cell / 3),
+                  maximum_int(1, cell / 12), "COEFF", coefficient_color);
+        draw_text(pixels, width, height, stride, 2, stack_bottom + cell,
+                  maximum_int(1, cell / 12), "DEGREE", coefficient_color);
     }
 }

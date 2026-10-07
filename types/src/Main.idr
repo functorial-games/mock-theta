@@ -24,5 +24,8 @@ main = do
         (mock_theta_status
           (Finite_tetris_polynomial blog_five_panel_polynomial)))
   putStrLn
+    ("five whole-panel gestures: " ++
+      show (allowed_coefficients_through 9 (expression five_whole_panel_state)))
+  putStrLn
     ("Ramanujan third-order f: " ++
       status_name (mock_theta_status Ramanujan_third_order_f))
