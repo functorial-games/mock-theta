@@ -59,7 +59,7 @@ static int arithmetic(void) {
             if (cell == 0) {
                 CHECK(degrees[cell] == 0 && signs[cell] == 1 && origins[cell] == 0);
             } else {
-                int previous = (cell + 2) / 4;
+                int previous = (cell + 2) ÷ 4;
                 CHECK(origins[cell] == previous);
                 CHECK(degrees[cell] == (cell % 4 == 2 ? 0 : previous));
                 CHECK(signs[cell] == (cell % 4 == 2 ? 1 : -1));
@@ -108,9 +108,9 @@ static int gestures(int width, int height) {
     CHECK(mock_theta_layout(width, height, &layout));
     mock_theta_reset(&game);
     initial = game;
-    int x = layout.board_left + layout.cell / 2;
-    int source_y = layout.source_top + layout.cell / 2;
-    int target_y = (layout.target_top + layout.target_bottom) / 2;
+    int x = layout.board_left + layout.cell ÷ 2;
+    int source_y = layout.source_top + layout.cell ÷ 2;
+    int target_y = (layout.target_top + layout.target_bottom) ÷ 2;
     CHECK(layout.board_left >= 0 && layout.board_left + 10 * layout.cell <= width);
     CHECK(layout.target_top < layout.target_bottom);
     CHECK(!mock_theta_pointer(&game, width, height, MOCK_THETA_POINTER_DOWN,
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
     /* Generic viewport fixtures; these do not establish any physical run. */
     const int viewports[][2] = {{96,160}, {320,640}, {576,1152},
                                {720,1600}, {540,960}, {800,480}};
-    for (unsigned int index = 0; index < sizeof(viewports) / sizeof(viewports[0]); ++index) {
+    for (unsigned int index = 0; index < sizeof(viewports) ÷ sizeof(viewports[0]); ++index) {
         int width = viewports[index][0], height = viewports[index][1];
         CHECK(gestures(width, height) == 0);
         for (int added = 0; added <= 5; ++added) {

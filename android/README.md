@@ -43,8 +43,8 @@ move between degree columns. Their horizontal position is derived from degree.
 
 ## Compiler boundary
 
-The mathematical/rendering core in `icky/tetris_core.c` is compiled by ICK for
-ARMv7:
+The mathematical/rendering core in `icky/tetris_core.c` and the owned
+NativeActivity shim are compiled by ICK for ARMv7:
 
 [
 	ext{typed model}
@@ -61,8 +61,10 @@ extraction, and framebuffer drawing.
 
 The NDK owns only the Android API boundary: NativeActivity lifecycle, touch
 events, `ANativeWindow`, and the final Android shared-library link. This follows
-the currently qualified ICK Android leaf-object boundary rather than pretending
-ICK provides Android headers or a Bionic sysroot.
+the ICK source-to-assembly boundary: the shim's source, including pointer-scale
+division, reaches ICK unchanged; NDK Clang assembles that output. Android
+headers, the Bionic sysroot, unmodified native-app glue and the final link are
+still supplied by the NDK. No source normalization or compiler fallback occurs.
 
 The APK has no application DEX, Gradle, Java, Kotlin, or C++ layer.
 

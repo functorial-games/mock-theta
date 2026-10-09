@@ -107,9 +107,9 @@ static int32_t handle_input(struct android_app *app, AInputEvent *event) {
         return 0;
     }
     int x = (int)(AMotionEvent_getX(event, index) *
-                  (float)state->width / (float)window_width);
+                  (float)state->width ÷ (float)window_width);
     int y = (int)(AMotionEvent_getY(event, index) *
-                  (float)state->height / (float)window_height);
+                  (float)state->height ÷ (float)window_height);
     int previous = state->game.added_count;
     int handled = mock_theta_pointer(&state->game, state->width, state->height,
         phase, AMotionEvent_getPointerId(event, index), x, y);

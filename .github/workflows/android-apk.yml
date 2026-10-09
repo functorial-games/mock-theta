@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 env:
-  ICK_COMMIT: 79eccb8ff232e05bdbb9e345fc224f251636b43f
+  ICK_COMMIT: c61e448251744a2f40ad743ebef1a027bdcd2f9d
   ANDROID_NDK_VERSION: 29.0.14206865
   ANDROID_API: "21"
 
@@ -19,7 +19,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Qualify pinned host ICK
+        id: host-ick
+        uses: isomorphisms/ai-ci/ick-host@ba3ff90023b09e525313793554edecf2141ff95b
       - name: Coefficients, provenance, whole-panel gestures and framebuffer bounds
+        env:
+          ICK_HOST_CC: ${{ steps.host-ick.outputs.compiler }}
         run: bash icky/test.sh
       - name: A1-sized host render
         run: build/host/tetris_core_test 576 1152 5 0 build/host/a1-final.ppm
@@ -32,6 +37,7 @@ jobs:
           if-no-files-found: error
 
   apk:
+    needs: host
     runs-on: ubuntu-24.04
     timeout-minutes: 150
 
@@ -40,9 +46,6 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Check host arithmetic fixture
-        run: bash icky/test.sh
 
       - name: Check out ICK and pinned GCC reference
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -113,6 +116,7 @@ jobs:
 
       - name: Link NativeActivity library
         env:
+          ICK_ARM_CC: ${{ github.workspace }}/build/ick-stage/bin/arm-linux-gnueabi-gcc
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.ANDROID_NDK_VERSION }}
           ANDROID_ABI: armeabi-v7a
           ANDROID_API: ${{ env.ANDROID_API }}
@@ -232,6 +236,8 @@ jobs:
             build/ick/armeabi-v7a/tetris_core.elf.txt
             build/ick/armeabi-v7a/tetris_core.attributes.txt
             build/ick/armeabi-v7a/tetris_core.undefined.txt
+            build/android/object/native_activity.o.abi.txt
+            build/android/object/native_activity.o.compiler.tsv
             build/android/native-*.bytes
             build/android/application-targets.tsv
             .flexible-pipes/.flexible-pipes/runs/
