@@ -2,4 +2,4 @@ build_id	target	toolchain	ick_revision	ick_status	ick_evidence
 mock-theta-host-regression	x86_64-linux-gnu	ick	c61e448251744a2f40ad743ebef1a027bdcd2f9d	qualified	pinned ai-ci/ick-host compiler and actual coefficient/gesture/framebuffer regressions
 mock-theta-tetris-core	armeabi-v7a	ick	c61e448251744a2f40ad743ebef1a027bdcd2f9d	qualified	ICK Thumb-2 softfp core object and unchanged app arithmetic fixtures
 mock-theta-nativeactivity-shim	armeabi-v7a	ick	c61e448251744a2f40ad743ebef1a027bdcd2f9d	qualified	ICK C-to-assembly with NDK API21 headers; NDK assembles and links the owned shim; physical acceptance remains separate
-mock-theta-native-app-glue-and-link	armeabi-v7a	ndk	c61e448251744a2f40ad743ebef1a027bdcd2f9d	boundary	unmodified NDK glue source, sysroot, assembler and final link remain NDK inputs
+mock-theta-native-app-glue-and-link	armeabi-v7a	ndk	c61e448251744a2f40ad743ebef1a027bdcd2f9d	gap:upstream-NDK-glue-assembler-and-platform-link	unmodified NDK glue source, sysroot, assembler and final link remain NDK inputs
