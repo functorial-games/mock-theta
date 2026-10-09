@@ -2,35 +2,53 @@ name: ICK Android APK
 
 on:
   pull_request:
-    paths:
-      - "icky/**"
-      - "android/**"
-      - "ci/build-toolchain.tsv"
-      - ".github/workflows/android-apk.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
-  ICK_COMMIT: 79eccb8ff232e05bdbb9e345fc224f251636b43f
+  ICK_COMMIT: c61e448251744a2f40ad743ebef1a027bdcd2f9d
   ANDROID_NDK_VERSION: 29.0.14206865
   ANDROID_API: "21"
 
 jobs:
+  host:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Qualify pinned host ICK
+        id: host-ick
+        uses: isomorphisms/ai-ci/ick-host@ba3ff90023b09e525313793554edecf2141ff95b
+      - name: Coefficients, provenance, whole-panel gestures and framebuffer bounds
+        env:
+          ICK_HOST_CC: ${{ steps.host-ick.outputs.compiler }}
+        run: bash icky/test.sh
+      - name: A1-sized host render
+        run: build/host/tetris_core_test 576 1152 5 0 build/host/a1-final.ppm
+      - name: C67-sized host render
+        run: build/host/tetris_core_test 720 1600 4 180 build/host/c67-drag.ppm
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mock-theta-host-regressions
+          path: build/host/*.ppm
+          if-no-files-found: error
+
   apk:
+    needs: host
     runs-on: ubuntu-24.04
     timeout-minutes: 150
 
     steps:
       - name: Check out Mock Theta
-        uses: actions/checkout@v4
-
-      - name: Check host arithmetic fixture
-        run: bash icky/test.sh
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check out ICK and pinned GCC reference
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: dilapidated-shed/ick
           ref: ${{ env.ICK_COMMIT }}
@@ -98,14 +116,24 @@ jobs:
 
       - name: Link NativeActivity library
         env:
+          ICK_ARM_CC: ${{ github.workspace }}/build/ick-stage/bin/arm-linux-gnueabi-gcc
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.ANDROID_NDK_VERSION }}
           ANDROID_ABI: armeabi-v7a
           ANDROID_API: ${{ env.ANDROID_API }}
         run: |
           bash android/build-native.sh             build/ick/armeabi-v7a/tetris_core.o             build/android/armeabi-v7a/libmocktheta.so
 
+      - name: Record pre-strip native size
+        run: stat -c '%s' build/android/armeabi-v7a/libmocktheta.so > build/android/native-pre-strip.bytes
+
+      - name: Strip native library with the selected NDK
+        run: ${{ env.ANDROID_HOME }}/ndk/${{ env.ANDROID_NDK_VERSION }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded build/android/armeabi-v7a/libmocktheta.so
+
+      - name: Record stripped native size
+        run: stat -c '%s' build/android/armeabi-v7a/libmocktheta.so > build/android/native-post-strip.bytes
+
       - name: Check out stable public test signer
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: isomorphismes/wegert
           ref: 89dcfb840cec1a66ee04c7f7404954cbd6c09839
@@ -114,20 +142,19 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Check out canonical Android packager
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: isomorphisms/android-NDK
           ref: 7c61ee43e75f7c2dab9288edb0e10055898b36e6
           path: .android-ndk
 
       - name: Check out central signing registry
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: isomorphisms/ai-ci
-          ref: 5404944497954137310967d3a7191340cf882030
+          ref: 8bf8be153f792c4def251287ed85543d1fe24f07
           path: .signing-policy
-          sparse-checkout: android-signing/identities.tsv
-          sparse-checkout-cone-mode: false
+          fetch-depth: 0
 
       - name: Load registered Functorial Mock Theta signer
         shell: bash
@@ -144,8 +171,8 @@ jobs:
       - name: Package signed APK
         env:
           ANDROID_PACKAGE_ID: org.functorialgames.mocktheta
-          ANDROID_VERSION_CODE: "1"
-          ANDROID_VERSION_NAME: "0.1.0"
+          ANDROID_VERSION_CODE: "2"
+          ANDROID_VERSION_NAME: "0.2.0"
           ANDROID_MIN_SDK: "21"
           ANDROID_TARGET_SDK: "36"
           ANDROID_BUILD_TOOLS: ${{ env.ANDROID_HOME }}/build-tools/36.0.0
@@ -154,21 +181,39 @@ jobs:
           ANDROID_KEY_ALIAS: wegert-debug
           ANDROID_STORE_PASSWORD: wegert-debug
           ANDROID_KEY_PASSWORD: wegert-debug
-          ANDROID_SOURCE_COMMIT: ${{ github.sha }}
+          ANDROID_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           bash .android-ndk/apk/build-nativeactivity-apk.sh             android/AndroidManifest.xml             build/android/armeabi-v7a/libmocktheta.so             armeabi-v7a             build/android/mock-theta-icky-armeabi-v7a.apk
 
-      - name: Mandatory Android producer gate
-        uses: isomorphisms/ai-ci/android-producer@5404944497954137310967d3a7191340cf882030
+      - name: Check out Flexible Pipes producer preflight
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          apk: build/android/mock-theta-icky-armeabi-v7a.apk
-          root: .
-          packager-receipt: build/android/mock-theta-icky-armeabi-v7a.receipt.tsv
-          packager-root: .android-ndk
-          expected-abi: armeabi-v7a
-          lane: test
-          require-no-dex: "true"
-          receipt-output: build/android/mock-theta-icky-armeabi-v7a.producer.tsv
+          repository: isomorphisms/flexible-pipes
+          ref: c8cb7ac069a798eaf6cc228de9a2c23b2b351587
+          path: .flexible-pipes
+
+      - name: Check out authoritative application target policy
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: isomorphisms/catfood
+          ref: 609a9628d5a52860f956bf62e0914a0cd03292ae
+          path: .catfood
+
+      - name: Retain requested paired policy without claiming paired execution
+        run: cp .catfood/android/application-targets.tsv build/android/application-targets.tsv
+
+      - name: Mandatory Flexible Pipes Android producer preflight
+        env:
+          AICI_CHECKOUT: ${{ github.workspace }}/.signing-policy
+          ANDROID_NDK_CHECKOUT: ${{ github.workspace }}/.android-ndk
+          ANDROID_APP_ROOT: ${{ github.workspace }}
+          ANDROID_APK: ${{ github.workspace }}/build/android/mock-theta-icky-armeabi-v7a.apk
+          ANDROID_PACKAGER_RECEIPT: ${{ github.workspace }}/build/android/mock-theta-icky-armeabi-v7a.receipt.tsv
+          ANDROID_EXPECTED_ABI: armeabi-v7a
+          ANDROID_SIGNING_LANE: test
+          ANDROID_REQUIRE_NO_DEX: "true"
+          ANDROID_PRODUCER_RECEIPT_OUTPUT: ${{ github.workspace }}/build/android/mock-theta-icky-armeabi-v7a.producer.tsv
+        run: bash .flexible-pipes/scripts/run-android-apk-preflight
 
       - name: Record evidence
         shell: bash
@@ -179,7 +224,7 @@ jobs:
           ! grep -Eq 'classes[0-9]*\.dex'             build/android/mock-theta-icky-armeabi-v7a.contents.txt
 
       - name: Retain ICK APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: mock-theta-icky-apk
           path: |
@@ -191,4 +236,9 @@ jobs:
             build/ick/armeabi-v7a/tetris_core.elf.txt
             build/ick/armeabi-v7a/tetris_core.attributes.txt
             build/ick/armeabi-v7a/tetris_core.undefined.txt
+            build/android/object/native_activity.o.abi.txt
+            build/android/object/native_activity.o.compiler.tsv
+            build/android/native-*.bytes
+            build/android/application-targets.tsv
+            .flexible-pipes/.flexible-pipes/runs/
           if-no-files-found: error

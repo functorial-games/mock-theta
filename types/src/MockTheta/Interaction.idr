@@ -186,3 +186,42 @@ public export
 blog_addition_state : Addition_state
 blog_addition_state =
   Addition blog_five_panel_polynomial
+
+-- Executable-core regression contracts: only whole Shape values enter
+-- arithmetic, and reset discards every prior permitted expression.
+public export
+reset_restores_empty_stack :
+     (state : Addition_state)
+  -> stack (apply_arithmetic Reset_addition state) = []
+reset_restores_empty_stack state = Refl
+
+public export
+first_whole_panel_is_typed_shape :
+    expression (apply_arithmetic
+      (Add_whole_panel MockTheta.Tetris.factor_5)
+      MockTheta.Interaction.empty_addition)
+    = Add Zero (Shape MockTheta.Tetris.factor_5)
+first_whole_panel_is_typed_shape = Refl
+
+public export
+five_whole_panel_state : Addition_state
+five_whole_panel_state =
+  add_panel factor_1
+    (add_panel factor_2
+      (add_panel factor_3
+        (add_panel factor_4
+          (add_panel factor_5 empty_addition))))
+
+public export
+five_whole_panel_expression :
+  expression MockTheta.Interaction.five_whole_panel_state
+    = Add
+        (Add
+          (Add
+            (Add
+              (Add Zero (Shape MockTheta.Tetris.factor_5))
+              (Shape MockTheta.Tetris.factor_4))
+            (Shape MockTheta.Tetris.factor_3))
+          (Shape MockTheta.Tetris.factor_2))
+        (Shape MockTheta.Tetris.factor_1)
+five_whole_panel_expression = Refl

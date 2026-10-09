@@ -332,3 +332,19 @@ blog_five_panel_coefficients :
   [15, -5, -5, -4, -4, -3, 2, 2, 1, 1]
 blog_five_panel_coefficients =
   Refl
+
+||| Same five-panel order under the interaction's left-associated additions.
+public export
+sequential_five_panel_coefficients :
+  allowed_coefficients_through 9
+    (Add
+      (Add
+        (Add
+          (Add
+            (Add Zero (Shape MockTheta.Tetris.factor_5))
+            (Shape MockTheta.Tetris.factor_4))
+          (Shape MockTheta.Tetris.factor_3))
+        (Shape MockTheta.Tetris.factor_2))
+      (Shape MockTheta.Tetris.factor_1))
+    = [15, -5, -5, -4, -4, -3, 2, 2, 1, 1]
+sequential_five_panel_coefficients = Refl

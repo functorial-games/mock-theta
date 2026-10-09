@@ -6,6 +6,44 @@
 #define MOCK_THETA_MAX_SHAPE_CELLS 18
 #define MOCK_THETA_MAX_TOTAL_CELLS 50
 
+/* The mathematical state is a deterministic prefix of whole typed panels.
+ * Cell diagrams are derived views, never independently movable state. */
+struct mock_theta_game {
+    int added_count;
+    int active_pointer;
+    int drag_start_y;
+    int preview_offset_y;
+    int reset_armed;
+};
+
+struct mock_theta_layout {
+    int cell;
+    int board_left;
+    int source_top;
+    int stack_bottom;
+    int target_top;
+    int target_bottom;
+    int reset_left;
+    int reset_top;
+};
+
+enum mock_theta_pointer_phase {
+    MOCK_THETA_POINTER_DOWN,
+    MOCK_THETA_POINTER_MOVE,
+    MOCK_THETA_POINTER_UP,
+    MOCK_THETA_POINTER_CANCEL
+};
+
+void mock_theta_reset(struct mock_theta_game *game);
+void mock_theta_cancel(struct mock_theta_game *game);
+int mock_theta_layout(int width, int height, struct mock_theta_layout *layout);
+int mock_theta_pointer(
+    struct mock_theta_game *game,
+    int width, int height,
+    enum mock_theta_pointer_phase phase,
+    int pointer, int x, int y
+);
+
 int mock_theta_shape_cell_count(int factor);
 
 int mock_theta_shape_cells(

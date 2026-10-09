@@ -70,17 +70,9 @@ work="$repo_root/build/android/object"
 rm -rf "$work"
 mkdir -p "$work" "$(dirname -- "$output")"
 
-"$clang" \
-    -std=c11 \
-    -O2 \
-    -fPIC \
-    -Wall \
-    -Wextra \
-    -Werror \
-    -I "$glue_dir" \
-    -I "$repo_root/icky" \
-    -c "$repo_root/android/native/native_activity.c" \
-    -o "$work/native_activity.o"
+make -f "$repo_root/icky/Makefile" native-activity-object \
+    ANDROID_NDK_HOME="$ndk" ANDROID_API="$api" \
+    NATIVE_ACTIVITY_OBJECT="$work/native_activity.o"
 
 "$clang" \
     -std=c11 \
